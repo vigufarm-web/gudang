@@ -1,19 +1,21 @@
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js';
-import * as gh from './github.js';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js';
+import * as D from './data.js?v=2';
+import * as gh from './github.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=2';
 
-import { halamanDashboard } from './dashboard.js';
-import { halamanMasuk } from './masuk.js';
-import { halamanKeluar } from './keluar.js';
-import { halamanSppb } from './sppb.js';
-import { halamanLaporan } from './laporan.js';
-import { halamanMaster, MASTER } from './master.js';
-import { halamanSistem, halamanRiwayat } from './sistem.js';
-import { halamanPersetujuan } from './persetujuan.js';
-import { halamanPusat } from './pusat.js';
+import { halamanDashboard } from './dashboard.js?v=2';
+import { halamanMasuk } from './masuk.js?v=2';
+import { halamanKeluar } from './keluar.js?v=2';
+import { halamanSppb } from './sppb.js?v=2';
+import { halamanLaporan } from './laporan.js?v=2';
+import { halamanMaster, MASTER } from './master.js?v=2';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=2';
+import { halamanPersetujuan } from './persetujuan.js?v=2';
+import { halamanPusat } from './pusat.js?v=2';
+import * as P from './pengguna.js?v=2';
+import { halamanPengguna } from './pengguna.js?v=2';
 
 const akar = document.getElementById('akar');
 
@@ -27,6 +29,7 @@ const HALAMAN = {
   persetujuan: { l: 'Persetujuan SPPB', sub: 'Admin membuat → kepala kebun yang minta meng-acc → KTU memeriksa', buat: halamanPersetujuan },
   riwayat: { l: 'Riwayat perubahan', sub: 'Setiap penyimpanan tercatat di sini', buat: halamanRiwayat },
   sistem: { l: 'Pengaturan', sub: 'Mode edit, token, pejabat & ttd, profil perusahaan', buat: halamanSistem },
+  pengguna: { l: 'Pengguna', sub: 'Admin/KTU, kepala kebun, dan hak akses per divisi', buat: halamanPengguna },
 };
 
 const KELOMPOK = [
@@ -34,11 +37,12 @@ const KELOMPOK = [
   { judul: 'Input data', item: ['masuk', 'keluar', 'sppb'] },
   { judul: 'Kepala kebun & KTU', item: ['persetujuan'] },
 ];
-const SISTEM = ['riwayat', 'sistem'];
+const SISTEM = ['pengguna', 'riwayat', 'sistem'];
 
 // Boleh mengubah data kalau ada token, ATAU kalau dibuka tanpa repo
 // (ujicoba di komputer — hasil simpanannya diunduh sebagai berkas).
-export const bisaEdit = () => !!gh.ambilToken() || D.modeLokal();
+export const bisaEdit = () => !!P.siapa() && (!!gh.ambilToken() || D.modeLokal());
+P.hubungkanAplikasi({bisaEdit,simpan:(...args) => simpanSekarang(...args)});
 
 // ---------------------------------------------------------------------
 // Simpan otomatis: beberapa detik setelah perubahan terakhir, data dikirim
@@ -186,6 +190,7 @@ function rute() {
 }
 
 async function bangunKerangka() {
+  await P.masuk(akar);
   const draf = await D.drafTersimpan();
   if (draf) {
     const pulih = await tanya('Ada input yang belum tersimpan', el('div', {}, [
@@ -196,6 +201,7 @@ async function bangunKerangka() {
     if (pulih) D.pakaiDraf(draf);
     else D.hapusDraf();
   }
+  if (!P.siapa()) await P.masuk(akar);
   elSisi = el('nav.sisi', { 'aria-label': 'Menu utama' });
   elKepala = el('header.kepala');
   elIsi = el('div.isi', { id: 'isi' });
@@ -225,14 +231,14 @@ function bangunMenu() {
   const kelompok = [];
   for (const g of KELOMPOK) {
     kelompok.push(el('div.sisi-kelompok', { teks: g.judul }));
-    for (const k of g.item) kelompok.push(tautan(k, HALAMAN[k].l));
+    for (const k of g.item) if (P.bolehHalaman(k)) kelompok.push(tautan(k, HALAMAN[k].l));
   }
   kelompok.push(el('div.sisi-kelompok', { teks: 'Master data' }));
   for (const [t, def] of Object.entries(MASTER)) {
-    kelompok.push(el('a', { href: `#/master/${t}`, teks: def.judul }));
+    if (P.bolehHalaman('master')) kelompok.push(el('a', { href: `#/master/${t}`, teks: def.judul }));
   }
   kelompok.push(el('div.sisi-kelompok', { teks: 'Sistem' }));
-  for (const k of SISTEM) kelompok.push(tautan(k, HALAMAN[k].l));
+  for (const k of SISTEM) if (P.bolehHalaman(k)) kelompok.push(tautan(k, HALAMAN[k].l));
 
   taruh(elSisi,
     el('div.sisi-merek', {}, [
@@ -241,6 +247,7 @@ function bangunMenu() {
     ]),
     el('div.sisi-menu', {}, kelompok),
     el('div.sisi-kaki', {}, [
+      el('div', {teks:`${P.siapa()?.nama || ''}${P.admin() ? ' · Admin / KTU' : ''}`}),
       el('div', {
         teks: D.modeLokal() ? 'Ujicoba di komputer'
           : bisaEdit() ? `Mode edit — ${D.namaPengisi() || 'tanpa nama'}` : 'Mode lihat',
@@ -252,6 +259,7 @@ function bangunMenu() {
             'Ada perubahan yang belum disimpan. Perubahan itu akan hilang.',
             { ya: 'Keluar', bahaya: true })) return;
           sessionStorage.removeItem('gudang.sandi');
+          P.keluar();
           location.reload();
         },
       }),
@@ -323,9 +331,16 @@ export function spandukLokal() {
 
 async function gambar() {
   const { nama, arg } = rute();
+  if (!P.siapa()) { location.reload(); return; }
   bangunMenu();   // lencana jumlah menunggu acc ikut tersegarkan
   elSisi.classList.remove('buka');
   tandaiMenuAktif();
+
+  if (!P.bolehHalaman(nama || 'dashboard')) {
+    gambarKepala('Akses dibatasi', 'Halaman ini tidak termasuk hak pengguna Anda.');
+    kosongkan(elIsi).append(el('p.petunjuk',{teks:'Hubungi OJORA/KTU untuk mengubah hak akses.'}));
+    return;
+  }
 
   if (nama === 'master' && MASTER[arg]) {
     gambarKepala(MASTER[arg].judul, MASTER[arg].sub || 'Master data');

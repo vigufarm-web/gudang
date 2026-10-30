@@ -4,7 +4,7 @@
 // Harus sama persis dengan services/sync_kunci.py di aplikasi desktop.
 
 const VERSI = 1;
-const ITERASI_BAWAAN = 200000;
+const ITERASI_BAWAAN = 600000;
 
 const b64ke = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const keB64 = (u8) => {

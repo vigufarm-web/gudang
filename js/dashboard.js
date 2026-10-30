@@ -1,10 +1,10 @@
 // dashboard.js — kartu ringkasan, tabel stok (gudang / per divisi, filter
 // kategori), dan daftar SPPB yang belum/sebagian direalisasi.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js';
-import { spandukLokal } from './main.js';
-import { kecil } from './form-util.js';
+import * as D from './data.js?v=2';
+import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js?v=2';
+import { spandukLokal } from './main.js?v=2';
+import { kecil } from './form-util.js?v=2';
 
 export async function halamanDashboard(wadah) {
   let kategori = '';

@@ -4,9 +4,10 @@
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js';
-import * as gh from './github.js';
-import { unduhTeks } from './ui.js';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=2';
+import * as gh from './github.js?v=2';
+import { unduhTeks } from './ui.js?v=2';
+import * as P from './pengguna.js?v=2';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';
@@ -27,7 +28,7 @@ export const TABEL_SEMUA = [
   'material_masuk', 'material_keluar', 'sppb', 'sppb_items',
 ];
 
-export const namaPengisi = () => localStorage.getItem(KUNCI_NAMA) ?? state.data?.settings?.default_nama_admin ?? 'OJORA';
+export const namaPengisi = () => P.siapa()?.nama || localStorage.getItem(KUNCI_NAMA) || state.data?.settings?.default_nama_admin || 'OJORA';
 export const setNamaPengisi = (n) => localStorage.setItem(KUNCI_NAMA, (n || '').trim());
 
 const KOSONG = [];
@@ -53,6 +54,7 @@ export function tandaiBerubah() {
 }
 
 export function tambah(tabel, isi) {
+  P.jagaTransaksi('tambah', tabel, null, isi);
   const r = { id: idBaru(tabel), ...isi };
   baris(tabel).push(r);
   // item baru pada SPPB yang sudah di-acc = isinya berubah → acc gugur
@@ -64,6 +66,7 @@ export function tambah(tabel, isi) {
 export function ubah(tabel, id, tambalan) {
   const r = cari(tabel, id);
   if (!r) throw new Error('Baris tidak ditemukan.');
+  P.jagaTransaksi('ubah', tabel, r, {...r,...tambalan});
   Object.assign(r, tambalan);
   if (tabel === 'sppb') gugurkanAcc(id, 'SPPB direvisi');
   if (tabel === 'sppb_items') gugurkanAcc(r.sppb_id, `item "${r.material}" direvisi`);
@@ -75,6 +78,7 @@ export function hapus(tabel, id) {
   const semua = baris(tabel);
   const i = semua.findIndex((r) => Number(r.id) === Number(id));
   if (i < 0) return false;
+  P.jagaTransaksi('hapus', tabel, semua[i], null);
   if (tabel === 'sppb_items') {
     gugurkanAcc(semua[i].sppb_id, `item "${semua[i].material}" dihapus`);
     // ceklis order item ini ikut dibuang — id item bisa terpakai ulang
@@ -106,6 +110,7 @@ export function pengaturan() {
 }
 
 export function setPengaturan(kunci, nilai) {
+  P.wajibAdmin();
   pengaturan()[kunci] = nilai;
   tandaiBerubah();
 }
@@ -171,6 +176,7 @@ export function daftarKepala() {
 export const kepalaDivisi = (divisi) => daftarKepala()[kecil(divisi)] || null;
 
 export function setKepalaDivisi(divisi, { nama, pin, ttd } = {}) {
+  P.wajibAdmin();
   const k = kecil(divisi);
   if (!k) return;
   const lama = daftarKepala()[k] || {};
@@ -184,6 +190,7 @@ export function setKepalaDivisi(divisi, { nama, pin, ttd } = {}) {
 }
 
 export function hapusKepalaDivisi(divisi) {
+  P.wajibAdmin();
   delete daftarKepala()[kecil(divisi)];
   tandaiBerubah();
 }
@@ -195,6 +202,7 @@ export function ktu() {
 }
 
 export function setKtu({ nama, pin, ttd } = {}) {
+  P.wajibAdmin();
   const k = ktu();
   if (nama !== undefined) k.nama = rapikan(nama);
   if (pin !== undefined) k.pin = String(pin || '');
@@ -246,6 +254,8 @@ export const waktuFullAcc = (sppbId) => {
 
 /** tahap: 'kepala' | 'ktu'. KTU hanya boleh acc setelah kepala kebun. */
 export function setujuiSppb(sppbId, tahap, oleh) {
+  P.jagaAcc(sppbId,tahap);
+  oleh = namaPengisi();
   if (!cari('sppb', sppbId)) throw new Error('SPPB tidak ditemukan.');
   if (tahap === 'ktu' && catatanAcc(sppbId)?.kepala?.status !== 'disetujui') {
     throw new Error('Acc KTU menunggu acc kepala kebun dulu.');
@@ -259,6 +269,8 @@ export function setujuiSppb(sppbId, tahap, oleh) {
 
 /** Menolak TIDAK menghapus SPPB — statusnya Ditolak, alasannya tercatat. */
 export function tolakSppb(sppbId, tahap, oleh, alasan) {
+  P.jagaAcc(sppbId,tahap);
+  oleh = namaPengisi();
   const bersih = rapikan(alasan);
   if (!bersih) throw new Error('Alasan penolakan wajib diisi supaya koreksinya bisa ditelusuri.');
   const c = catatanAccTulis(sppbId);
@@ -270,6 +282,8 @@ export function tolakSppb(sppbId, tahap, oleh, alasan) {
 /** Membatalkan acc/tolak satu tahap: kembali menunggu, tercatat siapa & kenapa.
  *  Batal acc kepala otomatis menggugurkan acc KTU (urutannya berjenjang). */
 export function batalkanAccSppb(sppbId, tahap, oleh, ket = '') {
+  P.jagaAcc(sppbId,tahap,true);
+  oleh = namaPengisi();
   const c = catatanAccTulis(sppbId);
   const sebelum = c[tahap]?.status || 'menunggu';
   delete c[tahap];
@@ -325,7 +339,22 @@ export const jumlahMenungguAcc = () => baris('sppb')
 
 export const orderItem = (itemId) => web().orderItem?.[String(itemId)] || null;
 
+export function setItemBatal(itemId, batal, oleh, alasan = '') {
+  const it = cari('sppb_items',itemId), s = it && cari('sppb',it.sppb_id);
+  if (!s || !P.cakupan(s.divisi_pemohon) || !P.punya('batal') || !(P.punya('kepala') || P.punya('ktu'))) {
+    throw new Error('Tidak memiliki hak pembatalan item untuk divisi ini.');
+  }
+  if (batal && !rapikan(alasan)) throw new Error('Alasan pembatalan wajib diisi.');
+  const w = web(); w.batalItem ||= {};
+  if (batal) w.batalItem[String(itemId)] = {oleh:namaPengisi(),waktu:sekarang(),alasan:rapikan(alasan)};
+  else delete w.batalItem[String(itemId)];
+  catatJejak(catatanAccTulis(s.id),batal ? 'batalkan item' : 'pulihkan item',namaPengisi(),`${it.material}: ${alasan}`);
+  tandaiBerubah();
+}
+
 export function setOrderItem(itemId, diorder, oleh) {
+  P.jagaOrder(itemId);
+  oleh = namaPengisi();
   const w = web();
   w.orderItem ||= {};
   if (diorder) {
@@ -382,7 +411,7 @@ export function pastikanMaster(tabel, nama, ekstra = {}) {
   let r = masterDenganNama(tabel, bersih);
   if (!r) {
     r = tambah(tabel, { nama: bersih, ...ekstra });
-  } else if (tabel === 'master_material' && !r.satuan_default && ekstra.satuan_default) {
+  } else if (P.admin() && tabel === 'master_material' && !r.satuan_default && ekstra.satuan_default) {
     r.satuan_default = ekstra.satuan_default;
     tandaiBerubah();
   }
@@ -465,9 +494,10 @@ export function laporanSppb() {
       const diminta = Number(it.qty_diminta) || 0;
       const sisa = dekatNol(diminta - realisasi);
       const status = realisasi <= 0 ? 'Belum Realisasi' : sisa > 0 ? 'Sebagian' : 'Selesai';
-      return { ...it, realisasi, sisa, status };
+      const batal = web().batalItem?.[String(it.id)] || null;
+      return { ...it, realisasi, sisa:batal ? 0 : sisa, status:batal ? 'Dibatalkan' : status, batal };
     });
-    const st = items.map((it) => it.status);
+    const st = items.filter((it) => !it.batal).map((it) => it.status);
     const status_keseluruhan = !st.length ? 'Tanpa Item'
       : st.every((x) => x === 'Selesai') ? 'Selesai'
         : st.every((x) => x === 'Belum Realisasi') ? 'Belum Realisasi' : 'Sebagian';
@@ -482,6 +512,7 @@ export function itemSppbTerbuka(materialFilter = null, sertakanItemId = null) {
   for (const s of laporanSppb()) {
     for (const it of s.items) {
       const terpilih = sertakanItemId != null && Number(it.id) === Number(sertakanItemId);
+      if (it.batal && !terpilih) continue;
       if (it.sisa <= 1e-9 && !terpilih) continue;
       if (materialFilter && kecil(it.material) !== kecil(materialFilter) && !terpilih) continue;
       hasil.push({
@@ -561,6 +592,7 @@ function susunMeta() {
 export const modeLokal = () => !gh.lokasiRepo();
 
 export async function simpan(pesan) {
+  if (!P.siapa()) throw new Error('Masuk sebagai pengguna dulu.');
   if (!state.data) throw new Error('Belum ada data yang dimuat.');
   if (!state.password) throw new Error('Password data belum dimasukkan.');
   state.gabungTerakhir = 0;
@@ -722,7 +754,7 @@ export function gabungTiga(dasar, lokal, remote) {
 // Saat situs dibuka lagi dan drafnya belum terkirim (rev masih sama),
 // pengguna ditawari memulihkannya. Dihapus begitu penyimpanan berhasil.
 // ---------------------------------------------------------------------
-const kunciDraf = () => `gudang.draf.${state.path}`;
+const kunciDraf = () => `gudang.draf.${state.path}.${P.siapa()?.id || 'anonim'}`;
 let timerDraf = null;
 function jadwalkanDraf() {
   if (!state.password || !state.data) return;
@@ -763,6 +795,7 @@ export function pakaiDraf(draf) {
 
 /** Pulihkan isi data dari satu commit lama di GitHub (halaman Riwayat). */
 export async function pulihkanVersiGitHub(ref) {
+  P.wajibAdmin();
   const { isi } = await gh.bacaFilePadaRef(state.path, ref);
   if (!isi) throw new Error('Versi GitHub tidak ditemukan.');
   const data = await bukaAmplop(isi, state.password);

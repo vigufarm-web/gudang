@@ -1,11 +1,11 @@
 // sistem.js — halaman Pengaturan (mode edit, token, profil perusahaan, status
 // data) dan Riwayat perubahan (daftar commit + pemulihan versi lama).
 
-import * as D from './data.js';
-import * as gh from './github.js';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, waktu, unduhTeks } from './ui.js';
-import { bisaEdit, spandukLokal, gambarUlang } from './main.js';
-import { kecil } from './form-util.js';
+import * as D from './data.js?v=2';
+import * as gh from './github.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, waktu, unduhTeks } from './ui.js?v=2';
+import { bisaEdit, spandukLokal, gambarUlang } from './main.js?v=2';
+import { kecil } from './form-util.js?v=2';
 
 const lembar = (judul, ...isi) => el('div.lembar', { style: 'margin-bottom:1rem' }, [
   el('div.lembar-isi', {}, [el('h2', { style: 'margin-bottom:.6rem', teks: judul }), ...isi]),
@@ -72,7 +72,7 @@ export async function halamanSistem(wadah) {
 
   // ----------------------------------------------------- simpan otomatis
   const bagianAuto = (async () => {
-    const { autoSimpanAktif, setAutoSimpan } = await import('./main.js');
+    const { autoSimpanAktif, setAutoSimpan } = await import('./main.js?v=2');
     const cek = el('input', { type: 'checkbox' });
     cek.checked = autoSimpanAktif();
     cek.addEventListener('change', () => {
@@ -239,7 +239,7 @@ export async function halamanSistem(wadah) {
       el('button.tombol-samar', {
         type: 'button', teks: 'Unduh berkas terenkripsi (gudang.json)',
         onclick: async () => {
-          const { kunciAmplop } = await import('./kunci.js');
+          const { kunciAmplop } = await import('./kunci.js?v=2');
           const amp = await kunciAmplop(D.state.data, D.state.password, D.state.meta || {});
           unduhTeks('gudang.json', JSON.stringify(amp), 'application/json');
         },

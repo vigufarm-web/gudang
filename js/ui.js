@@ -15,7 +15,10 @@ export function el(penanda, sifat = {}, anak = []) {
     if (v == null || v === false) continue;
     if (k === 'teks') n.textContent = v;
     else if (k === 'html') n.innerHTML = v;
-    else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+    else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), (e) => {
+      try { Promise.resolve(v(e)).catch((err) => pesan(err.message || 'Tindakan gagal.', 'galat', 8)); }
+      catch (err) { pesan(err.message || 'Tindakan gagal.', 'galat', 8); }
+    });
     else if (k === 'dataset') Object.assign(n.dataset, v);
     else if (k === 'nilai') n.value = v;
     else n.setAttribute(k, v === true ? '' : v);

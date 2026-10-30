@@ -8,11 +8,12 @@
 // menghapus SPPB. Acc yang telanjur diberikan bisa dibatalkan — tercatat
 // siapa dan kenapa. Semua keputusan masuk jejak audit per SPPB.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js';
-import { bisaEdit, spandukLokal } from './main.js';
-import { kecil } from './form-util.js';
-import { bukaDetailSppb } from './sppb.js';
+import * as D from './data.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js?v=2';
+import { bisaEdit, spandukLokal } from './main.js?v=2';
+import { kecil } from './form-util.js?v=2';
+import { bukaDetailSppb } from './sppb.js?v=2';
+import * as P from './pengguna.js?v=2';
 
 const chipAcc = (st) => el('span.chip' + (
   st === D.STATUS_ACC.FULL ? '.chip-ok'
@@ -58,6 +59,7 @@ const ringkasItem = (s) => {
 };
 
 async function aksiAcc(s, tahap, muatUlang) {
+  if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak persetujuan untuk tahap/divisi ini.','galat'); return; }
   const kepala = D.kepalaDivisi(s.divisi_pemohon);
   const pejabat = tahap === 'ktu' ? D.ktu() : kepala;
   const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Kebun ${s.divisi_pemohon || '(tanpa divisi)'}`;
@@ -82,6 +84,7 @@ async function aksiAcc(s, tahap, muatUlang) {
 }
 
 async function aksiTolak(s, tahap, muatUlang) {
+  if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak penolakan untuk tahap/divisi ini.','galat'); return; }
   const pejabat = tahap === 'ktu' ? D.ktu() : D.kepalaDivisi(s.divisi_pemohon);
   const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Kebun ${s.divisi_pemohon || ''}`;
   const lolos = await mintaPin(`Tolak — ${jabatan}`, pejabat?.pin,
@@ -101,6 +104,7 @@ async function aksiTolak(s, tahap, muatUlang) {
 async function aksiBatalkan(s, muatUlang) {
   const c = D.catatanAcc(s.id);
   const tahap = c?.ktu?.status ? 'ktu' : 'kepala';
+  if (!P.bolehAcc(s,tahap,true)) { pesan('Tidak memiliki hak pembatalan untuk tahap/divisi ini.','galat'); return; }
   const pejabat = tahap === 'ktu' ? D.ktu() : D.kepalaDivisi(s.divisi_pemohon);
   const lolos = await mintaPin('Batalkan keputusan', pejabat?.pin,
     `Keputusan terakhir pada SPPB ${s.no_sppb} dikembalikan ke antrean. `
@@ -151,7 +155,7 @@ export async function halamanPersetujuan(wadah) {
         ...[].concat(isi),
       ]),
     ]);
-    const tombolAksi = (s, tahap) => el('div', { style: 'display:flex;gap:.35rem;flex-wrap:wrap' }, [
+    const tombolAksi = (s, tahap) => !P.bolehAcc(s,tahap) ? 'Tidak memiliki hak' : el('div', { style: 'display:flex;gap:.35rem;flex-wrap:wrap' }, [
       el('button.tombol-kecil.tombol-utama', { type: 'button', teks: 'Acc', onclick: (e) => { e.stopPropagation(); aksiAcc(s, tahap, gambar); } }),
       el('button.tombol-kecil.tombol-bahaya', { type: 'button', teks: 'Tolak', onclick: (e) => { e.stopPropagation(); aksiTolak(s, tahap, gambar); } }),
     ]);
@@ -222,7 +226,7 @@ export async function halamanPersetujuan(wadah) {
           ...kolomDasar,
           { l: 'Divisi', k: 'divisi_pemohon' },
           { l: 'Full acc', nilai: (s) => waktu(D.waktuFullAcc(s.id).replace(' ', 'T')) },
-          bisaEdit() ? { l: '', nilai: (s) => el('button.tombol-kecil.tombol-samar', {
+          bisaEdit() ? { l: '', nilai: (s) => !P.bolehAcc(s,D.catatanAcc(s.id)?.ktu?.status ? 'ktu' : 'kepala',true) ? '' : el('button.tombol-kecil.tombol-samar', {
             type: 'button', teks: 'Batalkan acc',
             onclick: (e) => { e.stopPropagation(); aksiBatalkan(s, gambar); },
           }) } : null,

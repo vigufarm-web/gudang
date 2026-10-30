@@ -1,14 +1,16 @@
 // masuk.js — Material Masuk: form input + tabel, dengan link opsional ke item SPPB.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js';
-import { bisaEdit, spandukLokal } from './main.js';
+import * as D from './data.js?v=2';
+import * as P from './pengguna.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=2';
+import { bisaEdit, spandukLokal } from './main.js?v=2';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js';
+} from './form-util.js?v=2';
 
 function formMasuk(barisLama, saatSelesai) {
+  if (barisLama && !P.bolehUbah('material_masuk',barisLama)) return;
   const tempatGalat = el('div');
   const kTanggal = inputTanggal(barisLama?.tanggal);
   const kMaterial = inputMaster('master_material', barisLama?.material || '', {
@@ -62,6 +64,7 @@ function formMasuk(barisLama, saatSelesai) {
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
+    P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_masuk',barisLama,{...barisLama,...nilai});
     D.pastikanMaster('master_material', nilai.material, { satuan_default: nilai.satuan });
     if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
     if (barisLama) D.ubah('material_masuk', barisLama.id, nilai);
@@ -126,7 +129,7 @@ export async function halamanMasuk(wadah) {
         { l: 'Keterangan', k: 'keterangan' },
       ], tampil.slice(0, BATAS_TAMPIL), {
         kosong: 'Tidak ada material masuk pada filter ini.',
-        saatKlik: bisaEdit() ? (r) => formMasuk(r, gambarTabel) : null,
+        saatKlik: bisaEdit() ? (r) => { if (P.bolehUbah('material_masuk',r)) formMasuk(r,gambarTabel); else pesan('Tidak memiliki hak revisi untuk divisi ini.','awas'); } : null,
       }),
       catatanBatas(tampil.length),
     );
@@ -138,7 +141,7 @@ export async function halamanMasuk(wadah) {
     spandukLokal(),
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem' }, [
-        bisaEdit() ? el('button.tombol-utama', {
+        bisaEdit() && P.bolehInput() ? el('button.tombol-utama', {
           type: 'button', teks: '+ Catat material masuk',
           onclick: () => formMasuk(null, gambarTabel),
         }) : null,

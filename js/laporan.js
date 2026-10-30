@@ -1,10 +1,10 @@
 // laporan.js — Laporan WA: teks siap tempel ke WhatsApp (*bold* / _italic_),
 // padanan report_wa.py di aplikasi desktop.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, isian, hariIni } from './ui.js';
-import { spandukLokal } from './main.js';
-import { kecil, awalBulanIni } from './form-util.js';
+import * as D from './data.js?v=2';
+import { el, kosongkan, taruh, pesan, isian, hariIni } from './ui.js?v=2';
+import { spandukLokal } from './main.js?v=2';
+import { kecil, awalBulanIni } from './form-util.js?v=2';
 
 // angka ala Indonesia: 1.250 / 12,5 (maks 2 desimal, tanpa ,00)
 const fmt = (v) => {

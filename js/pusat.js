@@ -4,11 +4,12 @@
 // di-link ke item SPPB) sisanya berkurang otomatis. Tiap item ketahuan:
 // Belum Diorder → Diorder → Sampai Sebagian → Sampai.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js';
-import { bisaEdit, spandukLokal } from './main.js';
-import { kecil } from './form-util.js';
-import { bukaDetailSppb } from './sppb.js';
+import * as D from './data.js?v=2';
+import * as P from './pengguna.js?v=2';
+import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=2';
+import { bisaEdit, spandukLokal } from './main.js?v=2';
+import { kecil } from './form-util.js?v=2';
+import { bukaDetailSppb } from './sppb.js?v=2';
 
 const chipOrder = (st) => el('span.chip' + (
   st === 'Sampai' || st === 'Sampai Semua' ? '.chip-ok'
@@ -69,7 +70,7 @@ export async function halamanPusat(wadah) {
               const catatan = D.orderItem(it.id);
               const cek = el('input', { type: 'checkbox', style: 'width:1.15rem;height:1.15rem;accent-color:var(--hijau)' });
               cek.checked = !!catatan;
-              cek.disabled = !bisaEdit();
+              cek.disabled = !bisaEdit() || !P.punya('order') || !P.cakupan(s.divisi_pemohon);
               cek.addEventListener('change', () => {
                 D.setOrderItem(it.id, cek.checked, D.namaPengisi() || 'Admin Semarang');
                 pesan(cek.checked

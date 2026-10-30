@@ -1,15 +1,17 @@
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js';
-import { bisaEdit, spandukLokal } from './main.js';
+import * as D from './data.js?v=2';
+import * as P from './pengguna.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=2';
+import { bisaEdit, spandukLokal } from './main.js?v=2';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js';
+} from './form-util.js?v=2';
 
 function formKeluar(barisLama, saatSelesai) {
+  if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;
   const tempatGalat = el('div');
   const kTanggal = inputTanggal(barisLama?.tanggal);
   const kMaterial = inputMaster('master_material', barisLama?.material || '', {
@@ -65,6 +67,7 @@ function formKeluar(barisLama, saatSelesai) {
     if (!nilai.diambil_oleh) galat.push('"Diambil oleh" wajib diisi.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
+    P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_keluar',barisLama,{...barisLama,...nilai});
     D.pastikanMaster('master_material', nilai.material, { satuan_default: nilai.satuan });
     if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
     if (nilai.blok) D.pastikanMaster('master_blok', nilai.blok, { divisi: nilai.divisi || null, luas_ha: null });
@@ -129,7 +132,7 @@ export async function halamanKeluar(wadah) {
         { l: 'Keterangan', k: 'keterangan' },
       ], tampil.slice(0, BATAS_TAMPIL), {
         kosong: 'Tidak ada material keluar pada filter ini.',
-        saatKlik: bisaEdit() ? (r) => formKeluar(r, gambarTabel) : null,
+        saatKlik: bisaEdit() ? (r) => { if (P.bolehUbah('material_keluar',r)) formKeluar(r,gambarTabel); else pesan('Tidak memiliki hak revisi untuk divisi ini.','awas'); } : null,
       }),
       catatanBatas(tampil.length),
     );
@@ -141,7 +144,7 @@ export async function halamanKeluar(wadah) {
     spandukLokal(),
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem' }, [
-        bisaEdit() ? el('button.tombol-utama', {
+        bisaEdit() && P.bolehInput() ? el('button.tombol-utama', {
           type: 'button', teks: '+ Catat material keluar',
           onclick: () => formKeluar(null, gambarTabel),
         }) : null,

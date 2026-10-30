@@ -2,11 +2,12 @@
 // monitoring realisasi per item (dihitung otomatis dari Material Masuk yang
 // di-link), dan cetak surat permintaan ber-kop untuk persetujuan Direktur.
 
-import * as D from './data.js';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js';
-import { bisaEdit, spandukLokal } from './main.js';
-import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js';
-import { daftarJejak } from './persetujuan.js';
+import * as D from './data.js?v=2';
+import * as P from './pengguna.js?v=2';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=2';
+import { bisaEdit, spandukLokal } from './main.js?v=2';
+import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=2';
+import { daftarJejak } from './persetujuan.js?v=2';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -105,6 +106,7 @@ function formSppbBaru(saatSelesai) {
 
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
     if (divisi) D.pastikanMaster('master_divisi', divisi);
+    for (const it of items) D.pastikanMaster('master_material',it.material,{satuan_default:it.satuan});
     const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value) });
     for (const it of items) {
       D.pastikanMaster('master_material', it.material, { satuan_default: it.satuan });
@@ -227,7 +229,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
       el('div', { style: 'display:flex;align-items:center;gap:.6rem;margin:.8rem 0 .4rem' }, [
         el('h3', { teks: 'Item & realisasi' }),
         chipStatus(s.status_keseluruhan),
-        bisaEdit() ? el('button.tombol-samar.tombol-kecil', {
+        bisaEdit() && P.bolehInput() && P.cakupan(s.divisi_pemohon) ? el('button.tombol-samar.tombol-kecil', {
           type: 'button', teks: '+ Tambah item', style: 'margin-left:auto',
           onclick: () => formItem(s.id, null, () => { gambarItem(); saatSelesai(); }),
         }) : null,
@@ -250,7 +252,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
           ? el('span', {}, [el('span.chip', { teks: 'Dibatalkan' }),
             el('div.bantuan', { style: 'font-size:.74rem', teks: `${r.batal.oleh}: ${r.batal.alasan || ''}` })])
           : chipStatus(r.status)) },
-        bisaEdit() ? { l: '', nilai: (r) => el('button.tombol-kecil.tombol-samar', {
+        bisaEdit() && P.punya('batal') && (P.punya('kepala') || P.punya('ktu')) && P.cakupan(s.divisi_pemohon) ? { l: '', nilai: (r) => el('button.tombol-kecil.tombol-samar', {
           type: 'button',
           teks: r.batal ? 'Pulihkan' : 'Batal',
           title: r.batal ? 'Pulihkan item ini' : 'Batalkan item ini — tidak perlu diorder',
@@ -276,7 +278,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
         }) } : null,
       ].filter(Boolean), s.items, {
         kosong: 'Belum ada item.',
-        saatKlik: bisaEdit() ? (r) => formItem(s.id, D.cari('sppb_items', r.id), () => { gambarItem(); saatSelesai(); }) : null,
+        saatKlik: bisaEdit() && P.bolehUbah('sppb',s) ? (r) => formItem(s.id, D.cari('sppb_items', r.id), () => { gambarItem(); saatSelesai(); }) : null,
       }),
       el('p.bantuan', { teks: 'Realisasi dihitung otomatis dari Material Masuk yang di-link ke item itu. '
         + 'Tombol "Batal" = keputusan saat acc (item tidak perlu diorder) — berbeda dari revisi, acc tidak gugur.' }),
@@ -311,7 +313,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
     el('button.tombol-samar', { type: 'button', teks: 'Cetak surat permintaan', onclick: () => cetakSurat(s.id) }),
     el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick: simpanKepala }),
   ];
-  if (bisaEdit()) {
+  if (bisaEdit() && P.bolehUbah('sppb',s)) {
     aksi.unshift(el('button.tombol-bahaya', {
       type: 'button', teks: 'Hapus SPPB',
       onclick: async () => {
@@ -375,7 +377,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
     isian('Keterangan', kKet),
     blokAcc,
     tempatItem,
-  ]), bisaEdit() ? aksi : [aksi[0]]);
+  ]), bisaEdit() && P.bolehUbah('sppb',s) ? aksi : [aksi[0]]);
 }
 
 // --------------------------------------------------------- cetak surat
@@ -416,7 +418,7 @@ async function cetakSurat(sppbId) {
   });
   if (!lanjut) return;
 
-  if (bisaEdit()) {
+  if (bisaEdit() && P.admin()) {
     if ((atur.default_nama_disetujui || '') !== kSetuju.value.trim()) {
       D.setPengaturan('default_nama_disetujui', kSetuju.value.trim());
     }
@@ -572,7 +574,7 @@ export async function halamanSppb(wadah) {
     tempatRingkas,
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem' }, [
-        bisaEdit() ? el('button.tombol-utama', {
+        bisaEdit() && P.bolehInput() ? el('button.tombol-utama', {
           type: 'button', teks: '+ Buat SPPB',
           onclick: () => formSppbBaru(gambarTabel),
         }) : null,
