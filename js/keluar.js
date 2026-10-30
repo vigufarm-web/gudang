@@ -1,14 +1,14 @@
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js?v=3';
-import * as P from './pengguna.js?v=3';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=3';
-import { bisaEdit, spandukLokal } from './main.js?v=3';
+import * as D from './data.js?v=4';
+import * as P from './pengguna.js?v=4';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=4';
+import { bisaEdit, spandukLokal } from './main.js?v=4';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=3';
+} from './form-util.js?v=4';
 
 function formKeluar(barisLama, saatSelesai) {
   if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;

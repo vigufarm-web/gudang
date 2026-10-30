@@ -4,10 +4,10 @@
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=3';
-import * as gh from './github.js?v=3';
-import { unduhTeks } from './ui.js?v=3';
-import * as P from './pengguna.js?v=3';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=4';
+import * as gh from './github.js?v=4';
+import { unduhTeks } from './ui.js?v=4';
+import * as P from './pengguna.js?v=4';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';

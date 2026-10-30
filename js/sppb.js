@@ -2,12 +2,13 @@
 // monitoring realisasi per item (dihitung otomatis dari Material Masuk yang
 // di-link), dan cetak surat permintaan ber-kop untuk persetujuan Direktur.
 
-import * as D from './data.js?v=3';
-import * as P from './pengguna.js?v=3';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=3';
-import { bisaEdit, spandukLokal } from './main.js?v=3';
-import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=3';
-import { daftarJejak } from './persetujuan.js?v=3';
+import * as D from './data.js?v=4';
+import * as P from './pengguna.js?v=4';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=4';
+import { bisaEdit, spandukLokal } from './main.js?v=4';
+import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=4';
+import { daftarJejak } from './persetujuan.js?v=4';
+import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=4';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -334,7 +335,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
   const barisTahap = (label, t, pejabat) => {
     const kep = c?.[t];
     let teks;
-    if (kep?.status === 'disetujui') teks = `✔ ${kep.oleh} · ${waktu(kep.waktu.replace(' ', 'T'))}`;
+    if (kep?.status === 'disetujui') teks = kep.sumber==='manual' ? '✔ Disetujui manual (arsip) · tanggal asli tidak tersedia' : `✔ ${kep.oleh} · ${waktu(kep.waktu.replace(' ', 'T'))}`;
     else if (kep?.status === 'ditolak') teks = `✖ Ditolak ${kep.oleh}: ${kep.alasan || ''}`;
     else teks = pejabat?.nama ? `menunggu — ${pejabat.nama}` : 'menunggu — pejabatnya belum dipasang di Pengaturan';
     return el('div', { style: 'display:flex;gap:.5rem;font-size:.88rem;padding:.15rem 0' }, [
@@ -406,8 +407,8 @@ async function cetakSurat(sppbId) {
         + 'kop + logo, kolom Jumlah Diminta/Disetujui, Beban Biaya, Brand, Keterangan Tujuan Pemakaian, '
         + 'dan 5 kolom ttd: Dibuat, Diminta, Diperiksa, Mengetahui, Diterima.' }),
       el('p', { teks: `Status acc: ${stAcc}. `
-        + (kepalaAcc ? `Ttd kepala divisi${kepala?.ttd ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
-        + (ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
+        + (kepalaAcc?.sumber==='manual' ? 'Persetujuan kepala divisi dari arsip manual; gambar tanda tangan tidak ditempel. ' : kepalaAcc ? `Ttd kepala divisi${kepala?.ttd ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
+        + (ktuAcc?.sumber==='manual' ? 'Persetujuan KTU dari arsip manual; gambar tanda tangan tidak ditempel.' : ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
       isian('Dibuat — Admin Gudang', kAdmin),
       isian(`Diminta — Kepala Divisi ${s.divisi_pemohon || ''}`.trim(),
         el('input', { type: 'text', nilai: kepalaAcc?.oleh || kepala?.nama || '', disabled: true }),
@@ -519,8 +520,8 @@ async function cetakSurat(sppbId) {
 
     <table style="width:100%;margin-top:30px"><tr>
       ${ttd('Dibuat', kAdmin.value.trim())}
-      ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc ? (kepala?.ttd || '') : '')}
-      ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ktuAcc ? (dataKtu?.ttd || '') : '')}
+      ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? (kepala?.ttd || '') : '')}
+      ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ktuAcc && ktuAcc.sumber!=='manual' ? (dataKtu?.ttd || '') : '')}
       ${ttd('Mengetahui', kSetuju.value.trim())}
       ${ttd('Diterima', '')}
     </tr></table>
@@ -531,65 +532,74 @@ async function cetakSurat(sppbId) {
 }
 
 // --------------------------------------------------------------- halaman
-const FILTER_STATUS = ['Semua SPPB', 'Belum Lengkap (Belum + Sebagian)', 'Belum Realisasi Saja', 'Sebagian Saja', 'Selesai Saja'];
-
 export async function halamanSppb(wadah) {
-  let filterStatus = 'Semua SPPB';
-  const tempatTabel = el('div');
-  const tempatRingkas = el('div.angka-utama', { style: 'margin-bottom:1rem' });
-
-  const gambarTabel = () => {
-    const semua = D.laporanSppb();
-    const n = (st) => semua.filter((s) => s.status_keseluruhan === st).length;
-    kosongkan(tempatRingkas).append(
-      el('div', {}, [el('dl', {}, [el('dt', { teks: 'Total SPPB' }), el('dd', { teks: angka(semua.length) })])]),
-      el('div', {}, [el('dl', {}, [el('dt', { teks: 'Belum realisasi' }), el('dd', { teks: angka(n('Belum Realisasi')) })])]),
-      el('div', {}, [el('dl', {}, [el('dt', { teks: 'Sebagian' }), el('dd', { teks: angka(n('Sebagian')) })])]),
-      el('div', {}, [el('dl', {}, [el('dt', { teks: 'Selesai' }), el('dd', { teks: angka(n('Selesai')) })])]),
-    );
-    const tampil = semua.filter((s) => {
-      const st = s.status_keseluruhan;
-      if (filterStatus === 'Belum Realisasi Saja') return st === 'Belum Realisasi';
-      if (filterStatus === 'Sebagian Saja') return st === 'Sebagian';
-      if (filterStatus === 'Selesai Saja') return st === 'Selesai';
-      if (filterStatus === 'Belum Lengkap (Belum + Sebagian)') return st === 'Belum Realisasi' || st === 'Sebagian';
-      return true;
+  const filter={kata:'',divisi:'',dari:'',sampai:'',tahap:'semua',status:'semua'};
+  const ringkasan=el('div.monitor-ringkasan');
+  const tab=el('div.monitor-tab',{'aria-label':'Tahap monitoring'});
+  const hasil=el('div.monitor-hasil');
+  const jumlah=el('p.bantuan',{'aria-live':'polite'});
+  const galat=el('p.kesalahan',{hidden:true});
+  const tahapLabel=[['semua','Semua'],['persetujuan','Menunggu persetujuan'],['order','Siap order'],['penerimaan','Proses penerimaan'],['selesai','Selesai']];
+  const cari=el('input',{type:'search',placeholder:'Cari nomor SPPB atau material…','aria-label':'Cari SPPB atau material',oninput:e=>{filter.kata=e.target.value;gambar();}});
+  const divisi=el('select',{'aria-label':'Filter divisi',onchange:e=>{filter.divisi=e.target.value;gambar();}},[
+    el('option',{value:'',teks:'Semua divisi'}),
+    ...[...new Set(D.baris('sppb').map(s=>s.divisi_pemohon).filter(Boolean))].sort().map(d=>el('option',{value:d,teks:d})),
+  ]);
+  const dari=el('input',{type:'date','aria-label':'Dari tanggal',onchange:e=>{filter.dari=e.target.value;gambar();}});
+  const sampai=el('input',{type:'date','aria-label':'Sampai tanggal',onchange:e=>{filter.sampai=e.target.value;gambar();}});
+  function gambar() {
+    const semua=D.laporanSppb().map(s=>{
+      const c=D.catatanAcc(s.id),acc=D.statusAcc(s.id),p=ringkasProgres(s.items);
+      const adaOrder=s.items.some(it=>!it.batal && D.orderItem(it.id));
+      return {...s,acc,progres:p,manual:c?.kepala?.sumber==='manual' && c?.ktu?.sumber==='manual',
+        monitor:tahapMonitoring(s,acc===D.STATUS_ACC.FULL,adaOrder),adaOrder};
     });
-    kosongkan(tempatTabel).append(tabel([
-      { l: 'No. SPPB', k: 'no_sppb' },
-      { l: 'Tanggal', k: 'tanggal', jenis: 'tanggal' },
-      { l: 'Divisi pemohon', k: 'divisi_pemohon' },
-      { l: 'Item', nilai: (r) => angka(r.items.length), rata: 'angka' },
-      { l: 'Acc', nilai: (r) => chipAcc(D.statusAcc(r.id)) },
-      { l: 'Realisasi', nilai: (r) => chipStatus(r.status_keseluruhan) },
-      { l: 'Keterangan', k: 'keterangan' },
-    ], tampil, {
-      kosong: 'Tidak ada SPPB pada filter ini.',
-      saatKlik: (r) => bukaDetailSppb(r.id, gambarTabel),
-    }));
+    kosongkan(ringkasan);
+    for(const [label,st,warna] of [['Total SPPB','semua','hijau'],['Belum realisasi','Belum Realisasi','merah'],['Sebagian','Sebagian','kuning'],['Selesai','Selesai','hijau']]) {
+      const n=st==='semua'?semua.length:semua.filter(s=>s.status_keseluruhan===st).length;
+      ringkasan.append(el('button.monitor-kartu.'+warna,{type:'button','aria-pressed':filter.status===st,
+        onclick:()=>{filter.status=st;filter.tahap='semua';gambar();}},[
+        el('span',{teks:label}),el('strong',{teks:angka(n)}),el('small',{teks:st==='semua'?'Seluruh dokumen':'Klik untuk memfilter'}),
+      ]));
+    }
+    kosongkan(tab);
+    for(const [k,label] of tahapLabel) tab.append(el('button'+(filter.tahap===k?'.aktif':''),{type:'button','aria-pressed':filter.tahap===k,
+      onclick:()=>{filter.tahap=k;filter.status='semua';gambar();}},[label,el('span',{teks:String(k==='semua'?semua.length:semua.filter(s=>s.monitor===k).length)})]));
+    galat.hidden=!(filter.dari && filter.sampai && filter.dari>filter.sampai);
+    galat.textContent=galat.hidden?'':'Tanggal awal harus sebelum atau sama dengan tanggal akhir.';
+    const tampil=galat.hidden?semua.filter(s=>cocokFilter(s,filter)):[];
+    jumlah.textContent=`Menampilkan ${tampil.length} dari ${semua.length} SPPB${filter.status!=='semua'?' · '+filter.status:''}. Klik baris untuk rincian material dan penerimaan.`;
+    kosongkan(hasil).append(tabel([
+      {l:'SPPB',nilai:s=>el('div',{},[el('strong',{teks:s.no_sppb}),el('small.monitor-tanggal',{teks:tanggal(s.tanggal)})])},
+      {l:'Divisi',k:'divisi_pemohon'},
+      {l:'Persetujuan',nilai:s=>el('div',{},[chipAcc(s.acc),s.manual?el('small.monitor-manual',{teks:'Disetujui manual · arsip',title:'Persetujuan terdahulu dikonfirmasi pemilik. Tanggal asli tidak tersedia; tanggal pencatatan ada di jejak audit.'}):null])},
+      {l:'Progres penerimaan',nilai:s=>el('div.monitor-progres',{},[
+        el('div',{},[el('strong',{teks:`${s.progres.persen}%`}),el('span',{teks:`${s.progres.selesai}/${s.progres.total} item selesai`})]),
+        el('progress',{max:100,value:s.progres.persen,'aria-label':`Pemenuhan SPPB ${s.no_sppb}`,title:'Rata-rata pemenuhan per item; tidak menjumlahkan satuan material yang berbeda.'}),chipStatus(s.status_keseluruhan),
+      ])},
+      {l:'Alur proses',nilai:s=>{
+        const c=D.catatanAcc(s.id);
+        return el('div.monitor-alur',{},[
+          ['Kepala Divisi',c?.kepala?.status==='disetujui'],['KTU',c?.ktu?.status==='disetujui'],
+          ['Order',s.adaOrder],['Diterima',s.progres.total>0&&s.progres.selesai===s.progres.total],
+        ].map(([label,ok])=>el('span'+(ok?'.selesai':''),{teks:`${ok?'✓':'○'} ${label}`})));
+      }},
+      {l:'Keterangan',nilai:s=>el('span.monitor-catatan',{teks:s.keterangan||'—'})},
+    ],tampil,{kosong:'Tidak ada SPPB yang cocok. Ubah pencarian atau reset filter.',saatKlik:s=>bukaDetailSppb(s.id,gambar)}));
+  }
+  const reset=()=>{
+    Object.assign(filter,{kata:'',divisi:'',dari:'',sampai:'',tahap:'semua',status:'semua'});
+    cari.value='';divisi.value='';dari.value='';sampai.value='';gambar();
   };
-
-  taruh(wadah,
-    spandukLokal(),
-    tempatRingkas,
-    el('div.lembar', {}, [el('div.lembar-isi', {}, [
-      el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem' }, [
-        bisaEdit() && P.bolehInput() ? el('button.tombol-utama', {
-          type: 'button', teks: '+ Buat SPPB',
-          onclick: () => formSppbBaru(gambarTabel),
-        }) : null,
-        el('select', {
-          'aria-label': 'Filter status',
-          onchange: (e) => { filterStatus = e.target.value; gambarTabel(); },
-        }, FILTER_STATUS.map((st) => el('option', { value: st, teks: st }))),
-        el('button.tombol-samar.tombol-kecil', {
-          type: 'button', teks: 'Cetak monitoring', onclick: () => window.print(),
-        }),
-      ]),
-      tempatTabel,
-      el('p.bantuan', { style: 'margin-top:.7rem', teks:
-        'Klik satu SPPB untuk melihat realisasi tiap item, mengubah, atau mencetak surat permintaannya.' }),
-    ])]),
-  );
-  gambarTabel();
+  taruh(wadah,spandukLokal(),el('div.monitor-pengantar',{},[
+    el('div',{},[el('h2',{teks:'Monitoring SPPB'}),el('p',{teks:'Pantau persetujuan, pemesanan, dan penerimaan material dalam satu daftar.'})]),
+    el('div.monitor-aksi',{},[
+      bisaEdit()&&P.bolehInput()?el('button.tombol-utama',{type:'button',teks:'+ Buat SPPB',onclick:()=>formSppbBaru(gambar)}):null,
+      el('button.tombol-samar',{type:'button',teks:'Cetak monitoring',onclick:()=>window.print()}),
+    ]),
+  ]),ringkasan,el('div.lembar.monitor-lembar',{},[el('div.lembar-isi',{},[
+    tab,el('div.monitor-filter',{},[isian('Pencarian',cari),isian('Divisi',divisi),isian('Dari tanggal',dari),isian('Sampai tanggal',sampai),
+      el('button.tombol-samar',{type:'button',teks:'Reset filter',onclick:reset})]),galat,jumlah,hasil,
+  ])]));
+  gambar();
 }

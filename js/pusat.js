@@ -4,12 +4,12 @@
 // di-link ke item SPPB) sisanya berkurang otomatis. Tiap item ketahuan:
 // Belum Diorder → Diorder → Sampai Sebagian → Sampai.
 
-import * as D from './data.js?v=3';
-import * as P from './pengguna.js?v=3';
-import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=3';
-import { bisaEdit, spandukLokal } from './main.js?v=3';
-import { kecil } from './form-util.js?v=3';
-import { bukaDetailSppb } from './sppb.js?v=3';
+import * as D from './data.js?v=4';
+import * as P from './pengguna.js?v=4';
+import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=4';
+import { bisaEdit, spandukLokal } from './main.js?v=4';
+import { kecil } from './form-util.js?v=4';
+import { bukaDetailSppb } from './sppb.js?v=4';
 
 const chipOrder = (st) => el('span.chip' + (
   st === 'Sampai' || st === 'Sampai Semua' ? '.chip-ok'
@@ -17,7 +17,7 @@ const chipOrder = (st) => el('span.chip' + (
 ), { teks: st });
 
 export async function halamanPusat(wadah) {
-  let filterStatus = '';
+  let filterStatus = 'aktif';
   let filterDivisi = '';
 
   const tempatKartu = el('div.angka-utama', { style: 'margin-bottom:1rem' });
@@ -33,14 +33,14 @@ export async function halamanPusat(wadah) {
     const semuaItem = full.flatMap((s) => s.items.filter((it) => !it.batal));
     const nItem = (st) => semuaItem.filter((it) => D.statusOrderItem(it) === st).length;
     kosongkan(tempatKartu).append(...[
-      ['Order aktif (SPPB full acc)', angka(full.length)],
+      ['Order aktif (SPPB full acc)', angka(full.filter(s=>s.status_keseluruhan!=='Selesai').length)],
       ['Item belum diorder', angka(nItem('Belum Diorder'))],
       ['Item diorder, belum sampai', angka(nItem('Diorder'))],
       ['Item sampai', angka(nItem('Sampai') + nItem('Sampai Sebagian'))],
     ].map(([l, v]) => el('div', {}, [el('dl', {}, [el('dt', { teks: l }), el('dd', { teks: v })])])));
 
     const tampil = full
-      .filter((s) => !filterStatus || s.order === filterStatus)
+      .filter((s) => filterStatus==='aktif' ? s.status_keseluruhan!=='Selesai' : !filterStatus || s.order === filterStatus)
       .filter((s) => !filterDivisi || kecil(s.divisi_pemohon) === kecil(filterDivisi))
       .sort((a, b) => String(D.waktuFullAcc(b.id)).localeCompare(String(D.waktuFullAcc(a.id))));
 
@@ -110,6 +110,7 @@ export async function halamanPusat(wadah) {
     'aria-label': 'Filter status order',
     onchange: (e) => { filterStatus = e.target.value; gambar(); },
   }, [
+    el('option', { value: 'aktif', teks: 'Aktif · belum selesai' }),
     el('option', { value: '', teks: 'Semua status order' }),
     ...['Belum Diorder', 'Diorder Sebagian', 'Sudah Diorder', 'Sampai Sebagian', 'Sampai Semua']
       .map((st) => el('option', { value: st, teks: st })),

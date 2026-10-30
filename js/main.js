@@ -1,21 +1,21 @@
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=3';
-import * as gh from './github.js?v=3';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=3';
+import * as D from './data.js?v=4';
+import * as gh from './github.js?v=4';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=4';
 
-import { halamanDashboard } from './dashboard.js?v=3';
-import { halamanMasuk } from './masuk.js?v=3';
-import { halamanKeluar } from './keluar.js?v=3';
-import { halamanSppb } from './sppb.js?v=3';
-import { halamanLaporan } from './laporan.js?v=3';
-import { halamanMaster, MASTER } from './master.js?v=3';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=3';
-import { halamanPersetujuan } from './persetujuan.js?v=3';
-import { halamanPusat } from './pusat.js?v=3';
-import * as P from './pengguna.js?v=3';
-import { halamanPengguna } from './pengguna.js?v=3';
+import { halamanDashboard } from './dashboard.js?v=4';
+import { halamanMasuk } from './masuk.js?v=4';
+import { halamanKeluar } from './keluar.js?v=4';
+import { halamanSppb } from './sppb.js?v=4';
+import { halamanLaporan } from './laporan.js?v=4';
+import { halamanMaster, MASTER } from './master.js?v=4';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=4';
+import { halamanPersetujuan } from './persetujuan.js?v=4';
+import { halamanPusat } from './pusat.js?v=4';
+import * as P from './pengguna.js?v=4';
+import { halamanPengguna } from './pengguna.js?v=4';
 
 const akar = document.getElementById('akar');
 

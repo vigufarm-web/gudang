@@ -1,13 +1,13 @@
 // masuk.js — Material Masuk: form input + tabel, dengan link opsional ke item SPPB.
 
-import * as D from './data.js?v=3';
-import * as P from './pengguna.js?v=3';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=3';
-import { bisaEdit, spandukLokal } from './main.js?v=3';
+import * as D from './data.js?v=4';
+import * as P from './pengguna.js?v=4';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=4';
+import { bisaEdit, spandukLokal } from './main.js?v=4';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=3';
+} from './form-util.js?v=4';
 
 function formMasuk(barisLama, saatSelesai) {
   if (barisLama && !P.bolehUbah('material_masuk',barisLama)) return;
