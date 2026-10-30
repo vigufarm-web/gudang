@@ -5,22 +5,22 @@ Situs untuk melihat **dan mengisi** data aplikasi desktop Gudang (GudangApp):
 | Menu                 | Isi                                                                                 |
 |----------------------|-------------------------------------------------------------------------------------|
 | **Dashboard**        | Kartu ringkasan, stok saat ini (gudang & per divisi, filter kategori), SPPB belum lengkap |
-| **Kantor Pusat**     | Monitoring order: hanya SPPB yang sudah **full acc** (kepala kebun + KTU), lengkap % terpenuhi dari realisasi |
+| **Kantor Pusat**     | Monitoring order: hanya SPPB yang sudah **full acc** (kepala divisi + KTU), lengkap % terpenuhi dari realisasi |
 | **Laporan WA**       | Teks laporan masuk / keluar / stok per divisi / harian lengkap, siap tempel ke WhatsApp |
 | **Material Masuk**   | Catat barang diterima, dengan link opsional ke item SPPB (realisasi otomatis)        |
 | **Material Keluar**  | Catat barang diambil: blok, divisi, dan siapa yang mengambil (wajib)                 |
-| **SPPB**             | Buat SPPB banyak item (ditandai **kepala kebun divisi mana** yang minta), monitoring realisasi, cetak surat ber-kop + ttd |
-| **Persetujuan SPPB** | Acc berjenjang per divisi: Kepala Kebun → KTU → full acc, dengan PIN, tolak beralasan, dan jejak audit |
+| **SPPB**             | Buat SPPB banyak item (ditandai **kepala divisi divisi mana** yang minta), monitoring realisasi, cetak surat ber-kop + ttd |
+| **Persetujuan SPPB** | Acc berjenjang per divisi: Kepala Divisi → KTU → full acc, dengan PIN, tolak beralasan, dan jejak audit |
 | **Master data**      | Material, Divisi, Kategori, Satuan, Blok                                             |
 
 ## Alur persetujuan SPPB
 
 1. Admin gudang membuat SPPB dan mengisi **divisi pemohon** (Pisang, Padi, Infra, …) —
-   itulah penanda kepala kebun mana yang minta.
+   itulah penanda kepala divisi mana yang minta.
 2. SPPB masuk antrean **Persetujuan SPPB**, dikelompokkan per divisi. Kepala
    kebun divisi itu meng-**Acc** (atau **Tolak** dengan alasan — SPPB-nya tidak
-   terhapus). Bisa dikunci **PIN** per kepala kebun.
-3. Setelah acc kepala kebun, giliran **KTU** (KTU meng-acc semua divisi).
+   terhapus). Bisa dikunci **PIN** per kepala divisi.
+3. Setelah acc kepala divisi, giliran **KTU** (KTU meng-acc semua divisi).
    Dua-duanya acc = **Full Acc** → otomatis muncul di monitoring **Kantor
    Pusat** sebagai order. Nomor SPPB di form **lanjut otomatis** dari nomor
    terakhir (2696 → 2697), tetap boleh diubah.
@@ -30,7 +30,7 @@ Situs untuk melihat **dan mengisi** data aplikasi desktop Gudang (GudangApp):
    link ke item SPPB-nya → sisa berkurang otomatis. Status tiap item:
    *Belum Diorder → Diorder → Sampai Sebagian → Sampai*. Revisi SPPB
    menggugurkan acc **dan** ceklis ordernya sekaligus.
-4. **Tanda tangan**: di **Pengaturan → Kepala kebun, KTU & tanda tangan**, tiap
+4. **Tanda tangan**: di **Pengaturan → Kepala divisi, KTU & tanda tangan**, tiap
    pejabat menyimpan gambar ttd-nya (digambar langsung di layar atau unggah
    PNG/JPG). Surat SPPB yang dicetak otomatis menempelkan ttd tahap yang sudah
    acc + tanggal acc-nya; tahap yang belum acc dibiarkan kosong untuk ttd basah.
@@ -61,12 +61,20 @@ Password admin disimpan sebagai hash PBKDF2-SHA256 dengan salt acak dan
 600.000 iterasi di dalam berkas data terenkripsi, terpisah dari password data.
 
 Admin membuka **Pengguna → Tambah pengguna**, menentukan nama, username,
-password/PIN, divisi, dan hak akses. Pilihan peran: Kepala Kebun, Petugas Gudang,
+password/PIN, divisi, dan hak akses. Pilihan peran: Kepala Divisi, Petugas Gudang,
 Kantor Pusat, Lihat saja, serta Admin/KTU. Hak dapat disesuaikan: input,
-revisi/hapus, persetujuan kepala kebun, persetujuan KTU, pembatalan, dan ceklis order.
+revisi/hapus, persetujuan kepala divisi, persetujuan KTU, pembatalan, dan ceklis order.
 Admin dapat menonaktifkan pengguna. Master, Pengguna, Pengaturan dan Riwayat hanya
 untuk admin. Akun admin yang sedang masuk tidak dapat menonaktifkan atau menurunkan
 perannya sendiri. Nama pelaku persetujuan mengikuti akun yang sedang masuk.
+
+Semua pengguna aktif dapat membuka **Ganti password/PIN**. Password lama wajib
+benar, password baru minimal 6 karakter dan diulang dua kali. Perubahan langsung
+disimpan ke GitHub menggunakan token perangkat, terpisah dari simpan otomatis.
+Password data, peran, divisi dan password pengguna lain tidak ikut berubah.
+Jika penyimpanan gagal, password lama tetap berlaku. Simpan transaksi yang masih
+tertunda sebelum mengganti password. Sesi perangkat lain diminta masuk ulang
+ketika memuat ulang data terbaru.
 
 Untuk menyimpan pengaturan pengguna dan transaksi, token GitHub tetap diperlukan:
 **Pengaturan → Mode edit → Uji & simpan token**. Token hanya untuk repo `gudang`
@@ -172,7 +180,7 @@ js/dashboard.js       kartu ringkasan + stok + SPPB belum lengkap
 js/masuk.js           form & tabel Material Masuk (+ link SPPB)
 js/keluar.js          form & tabel Material Keluar
 js/sppb.js            buat SPPB, monitoring realisasi, cetak surat ber-kop + ttd
-js/persetujuan.js     acc berjenjang kepala kebun -> KTU, PIN, tolak, jejak audit
+js/persetujuan.js     acc berjenjang kepala divisi -> KTU, PIN, tolak, jejak audit
 js/pusat.js           monitoring Kantor Pusat (order dari SPPB full acc)
 js/laporan.js         laporan WA (masuk/keluar/stok/harian)
 js/master.js          CRUD Material, Divisi, Kategori, Satuan, Blok
