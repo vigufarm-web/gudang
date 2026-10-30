@@ -50,7 +50,7 @@ export function jagaOrder(itemId) {
 export async function masuk(wadah) {
   if (siapa()) return;
   return new Promise((selesai) => {
-    const nama = el('input',{type:'text', autocomplete:'username', required:true, placeholder:'OJORA / nama pengguna'});
+    const nama = el('input',{type:'text', autocomplete:'username', required:true, placeholder:'Nama pengguna'});
     const sandi = el('input',{type:'password', autocomplete:'current-password', required:true});
     const galat = el('div',{role:'alert'});
     const tombol = el('button.tombol-utama',{type:'submit',teks:'Masuk pengguna'});
