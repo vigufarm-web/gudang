@@ -227,3 +227,33 @@ tetap kosong bila tidak diketahui. Catatan manual tidak menambah tanda tangan,
 ceklis order, penerimaan, atau jumlah barang. Revisi tetap menggugurkan
 persetujuan dan mengembalikan dokumen ke antrean. Kantor Pusat menampilkan order
 aktif yang belum selesai secara bawaan; arsip selesai tersedia lewat filter.
+
+## Order bertahap dan Gudang pusat
+
+Kantor Pusat / Order mencatat setiap pemesanan dengan nomor ORD otomatis yang
+unik (UUID), supplier, jumlah/satuan order, satuan SPPB, satuan stok, faktor
+konversi, sumber konversi dan perkiraan datang. Satu item SPPB bisa memiliki
+beberapa order. Konversi tidak boleh diubah setelah ada penerimaan. Untuk
+kg/liter, gunakan massa jenis bahan dari dokumen supplier; tidak ada konversi
+1:1 bawaan. Order tanpa konversi dapat dicatat, tetapi belum dapat diterima
+atau dihitung sebagai pemenuhan.
+
+Barang ditunggu menampilkan order terbuka. Penerimaan memilih order dan jumlah
+yang datang, lalu menyimpan snapshot konversi; stok bertambah hanya ketika
+penerimaan dicatat. Sistem meminta alasan jika jumlah order/penerimaan melebihi
+sisa kebutuhan. Sisa order dapat ditutup dengan alasan, tanpa menganggapnya
+sudah diterima. Koreksi memiliki jejak perubahan; retur supplier dicatat
+terpisah dari penerimaan asal dan mengurangi stok/pemenuhan bersih.
+
+Penerimaan baru masuk ke Gudang. Pengeluaran langsung menjadi pemakaian divisi
+tujuan, dengan keperluan wajib, nama pengambil, kendaraan/mesin dan KM/HM
+opsional. Dashboard memisahkan Stok Gudang dari Pemakaian per divisi. Tidak ada
+stok divisi tambahan yang dihitung. Pertalite, Pertamax dan Solar adalah tiga
+material terpisah dengan satuan stok Liter, bukan satu saldo BBM gabungan.
+Riwayat lama tidak diklasifikasi ulang atau dikonversi otomatis.
+
+Peran Petugas Gudang yang baru dipilih mendapat hak Kelola stok Gudang dan
+pemakaian semua divisi. Hak pengguna lama tidak diperluas diam-diam; admin
+dapat menambahkan hak Gudang lewat Pengguna. Token GitHub tetap diperlukan
+pada setiap perangkat yang menulis. Ceklis order lama tetap ditandai sebagai
+jumlah belum dirinci; tidak dianggap seluruh permintaan sudah dipesan.
