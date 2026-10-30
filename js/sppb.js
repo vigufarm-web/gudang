@@ -2,12 +2,12 @@
 // monitoring realisasi per item (dihitung otomatis dari Material Masuk yang
 // di-link), dan cetak surat permintaan ber-kop untuk persetujuan Direktur.
 
-import * as D from './data.js?v=2';
-import * as P from './pengguna.js?v=2';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=2';
-import { bisaEdit, spandukLokal } from './main.js?v=2';
-import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=2';
-import { daftarJejak } from './persetujuan.js?v=2';
+import * as D from './data.js?v=3';
+import * as P from './pengguna.js?v=3';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=3';
+import { bisaEdit, spandukLokal } from './main.js?v=3';
+import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=3';
+import { daftarJejak } from './persetujuan.js?v=3';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -23,7 +23,7 @@ const chipAcc = (st) => el('span.chip' + (
 async function konfirmasiRevisi(sppbId, apa) {
   const c = D.catatanAcc(sppbId);
   const sudah = ['kepala', 'ktu'].filter((t) => c?.[t]?.status === 'disetujui')
-    .map((t) => (t === 'ktu' ? 'KTU' : 'kepala kebun'));
+    .map((t) => (t === 'ktu' ? 'KTU' : 'kepala divisi'));
   if (!sudah.length) return true;
   return tanya('Revisi menggugurkan acc', `SPPB ini sudah di-acc ${sudah.join(' & ')}. `
     + `Kalau ${apa}, acc-nya gugur dan SPPB kembali ke antrean persetujuan dari awal — tercatat di jejak.`,
@@ -95,7 +95,7 @@ function formSppbBaru(saatSelesai) {
       galat.push(`No. SPPB "${no}" sudah ada.`);
     }
     if (!kTanggal.value) galat.push('Tanggal wajib diisi.');
-    if (!rapikan(kDivisi.value)) galat.push('Divisi pemohon wajib diisi — acc kepala kebun dialamatkan dari sini.');
+    if (!rapikan(kDivisi.value)) galat.push('Divisi pemohon wajib diisi — acc kepala divisi dialamatkan dari sini.');
     if (!items.length) galat.push('Minimal satu item material.');
     items.forEach((it, i) => {
       if (!it.material) galat.push(`Item ${i + 1}: material wajib diisi.`);
@@ -124,7 +124,7 @@ function formSppbBaru(saatSelesai) {
       isian('Tanggal *', kTanggal),
     ]),
     isian('Divisi pemohon (kebun yang minta) *', kDivisi, {
-      bantuan: 'Pisang, Padi, Infra, … — SPPB baru masuk antrean acc kepala kebun divisi ini.',
+      bantuan: 'Pisang, Padi, Infra, … — SPPB baru masuk antrean acc kepala divisi divisi ini.',
     }),
     isian('Keterangan', kKet),
     el('h3', { style: 'margin:.8rem 0 .4rem', teks: 'Item material' }),
@@ -294,7 +294,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
       && rapikan(x.no_sppb).toLowerCase() === no.toLowerCase())) galat.push(`No. SPPB "${no}" sudah dipakai.`);
     if (!kTanggal.value) galat.push('Tanggal wajib diisi.');
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
-    if (!divisi) galat.push('Divisi pemohon wajib diisi — acc kepala kebun dialamatkan dari sini.');
+    if (!divisi) galat.push('Divisi pemohon wajib diisi — acc kepala divisi dialamatkan dari sini.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     const berubah = no !== rapikan(s.no_sppb) || kTanggal.value !== s.tanggal
@@ -354,9 +354,9 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
     ...(stAcc === D.STATUS_ACC.LAMA
       ? [el('p.bantuan', { style: 'margin:.2rem 0 0', teks:
         'SPPB ini dibuat sebelum fitur persetujuan ada, jadi tidak perlu di-acc. '
-        + 'Alur acc kepala kebun → KTU hanya berlaku untuk pengajuan baru.' })]
+        + 'Alur acc kepala divisi → KTU hanya berlaku untuk pengajuan baru.' })]
       : [
-        barisTahap(`Kepala Kebun ${s.divisi_pemohon || ''}`.trim(), 'kepala', D.kepalaDivisi(s.divisi_pemohon)),
+        barisTahap(`Kepala Divisi ${s.divisi_pemohon || ''}`.trim(), 'kepala', D.kepalaDivisi(s.divisi_pemohon)),
         barisTahap('KTU', 'ktu', D.ktu()),
         el('p.bantuan', { style: 'margin:.3rem 0 0', teks: 'Keputusan acc/tolak dilakukan di menu Persetujuan. '
           + 'Merevisi SPPB menggugurkan acc yang sudah ada.' }),
@@ -372,7 +372,7 @@ export function bukaDetailSppb(sppbId, saatSelesai) {
     ]),
     isian('Divisi pemohon (kebun yang minta) *', kDivisi, {
       bantuan: D.kepalaDivisi(s.divisi_pemohon)?.nama
-        ? `Kepala kebun terdaftar: ${D.kepalaDivisi(s.divisi_pemohon).nama}` : null,
+        ? `Kepala divisi terdaftar: ${D.kepalaDivisi(s.divisi_pemohon).nama}` : null,
     }),
     isian('Keterangan', kKet),
     blokAcc,
@@ -406,12 +406,12 @@ async function cetakSurat(sppbId) {
         + 'kop + logo, kolom Jumlah Diminta/Disetujui, Beban Biaya, Brand, Keterangan Tujuan Pemakaian, '
         + 'dan 5 kolom ttd: Dibuat, Diminta, Diperiksa, Mengetahui, Diterima.' }),
       el('p', { teks: `Status acc: ${stAcc}. `
-        + (kepalaAcc ? `Ttd kepala kebun${kepala?.ttd ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala kebun kosong untuk ttd basah. ')
+        + (kepalaAcc ? `Ttd kepala divisi${kepala?.ttd ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
         + (ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
       isian('Dibuat — Admin Gudang', kAdmin),
-      isian(`Diminta — Kepala Kebun ${s.divisi_pemohon || ''}`.trim(),
+      isian(`Diminta — Kepala Divisi ${s.divisi_pemohon || ''}`.trim(),
         el('input', { type: 'text', nilai: kepalaAcc?.oleh || kepala?.nama || '', disabled: true }),
-        { bantuan: 'Nama & ttd mengikuti acc / Pengaturan → Kepala kebun & tanda tangan.' }),
+        { bantuan: 'Nama & ttd mengikuti acc / Pengaturan → Kepala divisi & tanda tangan.' }),
       isian('Diperiksa — KTU', el('input', { type: 'text', nilai: ktuAcc?.oleh || dataKtu?.nama || '', disabled: true })),
       isian('Mengetahui', kSetuju, { bantuan: 'Kolom "Diterima" dibiarkan kosong untuk ttd penerima barang.' }),
     ]), [el('button.tombol-utama', { type: 'button', teks: 'Buka pratinjau cetak', onclick: () => { p.tutup(); selesai(true); } })]);

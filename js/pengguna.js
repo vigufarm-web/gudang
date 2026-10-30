@@ -1,6 +1,8 @@
-import * as D from './data.js?v=2';
-import * as H from './hak.js?v=2';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=2';
+import * as D from './data.js?v=3';
+import * as H from './hak.js?v=3';
+import * as gh from './github.js?v=3';
+import {bukaAmplop, kunciAmplop} from './kunci.js?v=3';
+import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=3';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }
@@ -15,6 +17,70 @@ export function siapa() {
   } catch { return null; }
 }
 export function keluar() { sessionStorage.removeItem(SESI); }
+
+export async function gantiSandiSendiri(lama, baru, ulang) {
+  const pelaku = siapa();
+  if (!pelaku) throw new Error('Masuk sebagai pengguna dulu.');
+  if (!lama) throw new Error('Password/PIN lama wajib diisi.');
+  if (baru.length < 6) throw new Error('Password/PIN baru minimal 6 karakter.');
+  if (baru !== ulang) throw new Error('Ulangan password/PIN baru tidak sama.');
+  if (baru === lama) throw new Error('Gunakan password/PIN yang berbeda dari sebelumnya.');
+  if (D.state.belumDisimpan) throw new Error('Simpan perubahan data yang belum tersimpan terlebih dahulu.');
+  if (!gh.lokasiRepo() || !gh.ambilToken()) throw new Error('Token GitHub pada perangkat ini diperlukan. Minta admin memasangnya melalui Pengaturan → Mode edit.');
+  const sandi = await H.hashSandi(baru);
+  for (let percobaan = 0; percobaan < 3; percobaan++) {
+    const {isi,sha} = await gh.bacaFile(D.PATH);
+    const terbaru = await bukaAmplop(isi,D.state.password);
+    const pengguna = terbaru.web?.pengguna?.[pelaku.id];
+    if (!pengguna || pengguna.aktif === false || pengguna.sandi?.hash !== pelaku.sandi.hash ||
+        !await H.periksaSandi(lama,pengguna.sandi)) throw new Error('Password/PIN lama salah atau akun sudah berubah. Masuk ulang jika diperlukan.');
+    if (siapa()?.id !== pelaku.id || D.state.belumDisimpan) throw new Error('Sesi atau data berubah. Coba kembali setelah menyimpan data.');
+    terbaru.web.pengguna[pelaku.id] = {...pengguna,sandi};
+    terbaru.rev = (Number(terbaru.rev) || 0) + 1;
+    terbaru.dibuat = new Date().toISOString().slice(0,19);
+    terbaru.dari = `Web — ${pengguna.nama}`;
+    const meta = {...isi.meta,rev:terbaru.rev,diperbarui:terbaru.dibuat,dari:terbaru.dari};
+    const amplop = await kunciAmplop(terbaru,D.state.password,meta);
+    try {
+      const shaBaru = await gh.tulisFile(D.PATH,amplop,sha,'Web: ganti password pengguna');
+      const masihSama = siapa()?.id === pelaku.id;
+      const adaInputBaru = D.state.belumDisimpan;
+      const lokal = adaInputBaru ? D.gabungTiga(JSON.parse(D.state.dasarJson),D.state.data,terbaru) : terbaru;
+      D.hapusDraf();
+      Object.assign(D.state,{data:lokal,meta,sha:shaBaru,dasarJson:JSON.stringify(terbaru),belumDisimpan:adaInputBaru});
+      if (masihSama) sessionStorage.setItem(SESI,JSON.stringify({id:pelaku.id,hash:sandi.hash}));
+      if (adaInputBaru) D.tandaiBerubah();
+      return terbaru.rev;
+    } catch(e) {
+      if (!e.bentrok || percobaan === 2) throw e;
+    }
+  }
+}
+
+export async function halamanSandi(wadah) {
+  if (!siapa()) throw new Error('Masuk sebagai pengguna dulu.');
+  const lama=el('input',{type:'password',autocomplete:'current-password',required:true});
+  const baru=el('input',{type:'password',autocomplete:'new-password',minlength:6,required:true});
+  const ulang=el('input',{type:'password',autocomplete:'new-password',minlength:6,required:true});
+  const hasil=el('div',{role:'status','aria-live':'polite'});
+  const tombol=el('button.tombol-utama',{type:'submit',teks:'Simpan password baru'});
+  let sedang=false;
+  const form=el('form',{onsubmit:async(e)=>{
+    e.preventDefault(); if(sedang)return; sedang=true; tombol.disabled=true; hasil.textContent='';
+    try {
+      const rev=await gantiSandiSendiri(lama.value,baru.value,ulang.value);
+      lama.value='';baru.value='';ulang.value='';
+      hasil.className='petunjuk';hasil.textContent=`Password/PIN berhasil diganti dan tersimpan ke GitHub (rev ${rev}). Gunakan password/PIN baru saat masuk berikutnya.`;
+    } catch(err) {hasil.className='kesalahan';hasil.textContent=err.message;}
+    finally {sedang=false;tombol.disabled=false;}
+  }},[
+    el('p',{teks:'Ubah password/PIN akun yang sedang masuk. Password data tetap sama.'}),
+    isian('Password / PIN lama',lama),isian('Password / PIN baru',baru,{bantuan:'Minimal 6 karakter.'}),
+    isian('Ulangi password / PIN baru',ulang),hasil,tombol,
+    el('p.bantuan',{teks:'Perubahan langsung disimpan ke GitHub dan memerlukan token pada perangkat ini. Tidak perlu menunggu simpan otomatis.'}),
+  ]);
+  kosongkan(wadah).append(el('div.lembar',{},[el('div.lembar-isi',{},[form])]));
+}
 export const admin = () => siapa()?.admin === true;
 export const punya = (hak) => H.punya(siapa(), hak);
 export const cakupan = (divisi) => H.cakupan(siapa(), divisi);
@@ -100,7 +166,7 @@ function formPengguna(wadah,p,kembali) {
   const nama = el('input',{type:'text',nilai:p?.nama || '',required:true});
   const username = el('input',{type:'text',nilai:p?.username || '',required:true,autocomplete:'off',pattern:'[A-Za-z0-9_.-]{2,40}'});
   const password = el('input',{type:'password',autocomplete:'new-password',minlength:6,placeholder:p ? 'Kosongkan jika tetap' : 'Minimal 6 karakter',required:!p});
-  const peran = el('select',{},[['kepala','Kepala Kebun'],['gudang','Petugas Gudang'],['pusat','Kantor Pusat'],['lihat','Lihat saja'],['admin','Admin / KTU']].map(([v,l]) => el('option',{value:v,teks:l})));
+  const peran = el('select',{},[['kepala','Kepala Divisi'],['gudang','Petugas Gudang'],['pusat','Kantor Pusat'],['lihat','Lihat saja'],['admin','Admin / KTU']].map(([v,l]) => el('option',{value:v,teks:l})));
   peran.value = p?.admin ? 'admin' : p?.peran || 'kepala';
   const aktif = el('input',{type:'checkbox',checked:p?.aktif !== false});
   const divisi = [...new Set([...D.baris('master_divisi').map((r) => r.nama), ...(p?.divisi || [])])].filter(Boolean).sort();

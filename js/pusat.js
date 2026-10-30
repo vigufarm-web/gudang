@@ -4,12 +4,12 @@
 // di-link ke item SPPB) sisanya berkurang otomatis. Tiap item ketahuan:
 // Belum Diorder → Diorder → Sampai Sebagian → Sampai.
 
-import * as D from './data.js?v=2';
-import * as P from './pengguna.js?v=2';
-import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=2';
-import { bisaEdit, spandukLokal } from './main.js?v=2';
-import { kecil } from './form-util.js?v=2';
-import { bukaDetailSppb } from './sppb.js?v=2';
+import * as D from './data.js?v=3';
+import * as P from './pengguna.js?v=3';
+import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=3';
+import { bisaEdit, spandukLokal } from './main.js?v=3';
+import { kecil } from './form-util.js?v=3';
+import { bukaDetailSppb } from './sppb.js?v=3';
 
 const chipOrder = (st) => el('span.chip' + (
   st === 'Sampai' || st === 'Sampai Semua' ? '.chip-ok'
@@ -102,7 +102,7 @@ export async function halamanPusat(wadah) {
       { l: 'Tanggal', k: 'tanggal', jenis: 'tanggal' },
       { l: 'Divisi', k: 'divisi_pemohon' },
       { l: 'Menunggu', nilai: (s) => (s.acc === D.STATUS_ACC.MENUNGGU_KEPALA
-        ? `Kepala Kebun ${s.divisi_pemohon || ''}`.trim() : 'KTU') },
+        ? `Kepala Divisi ${s.divisi_pemohon || ''}`.trim() : 'KTU') },
     ], menunggu, { kosong: 'Tidak ada SPPB yang masih menunggu acc.' }));
   };
 

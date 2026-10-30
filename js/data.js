@@ -4,10 +4,10 @@
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=2';
-import * as gh from './github.js?v=2';
-import { unduhTeks } from './ui.js?v=2';
-import * as P from './pengguna.js?v=2';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=3';
+import * as gh from './github.js?v=3';
+import { unduhTeks } from './ui.js?v=3';
+import * as P from './pengguna.js?v=3';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';
@@ -122,7 +122,7 @@ export function web() {
 }
 
 // =====================================================================
-// PERSETUJUAN SPPB — acc berjenjang Kepala Kebun → KTU → full acc.
+// PERSETUJUAN SPPB — acc berjenjang Kepala Divisi → KTU → full acc.
 //
 // Disimpan di bagian `web` berkas data (bukan tabel database), supaya
 // aplikasi desktop tidak perlu diubah skemanya:
@@ -141,7 +141,7 @@ const sekarang = () => {
 };
 
 export const STATUS_ACC = {
-  MENUNGGU_KEPALA: 'Menunggu Kepala Kebun',
+  MENUNGGU_KEPALA: 'Menunggu Kepala Divisi',
   MENUNGGU_KTU: 'Menunggu KTU',
   FULL: 'Full Acc',
   DITOLAK: 'Ditolak',
@@ -151,7 +151,7 @@ export const STATUS_ACC = {
 /**
  * Batas SPPB lama: SPPB ber-id sampai angka ini (dan belum pernah disentuh
  * keputusan apa pun) dianggap LAMA — tidak perlu di-acc dan tidak masuk
- * antrean. Hanya PENGAJUAN BARU yang lewat alur kepala kebun → KTU.
+ * antrean. Hanya PENGAJUAN BARU yang lewat alur kepala divisi → KTU.
  *
  * Angkanya ditetapkan sekali: saat ekspor pertama (tools/ekspor_gudang.py)
  * atau saat data pertama kali dibuka di situs, lalu ikut tersimpan.
@@ -166,7 +166,7 @@ export function accBatasId() {
   return Number(w.accBatasId) || 0;
 }
 
-/** Daftar kepala kebun per divisi (kunci: nama divisi huruf kecil). */
+/** Daftar kepala divisi per divisi (kunci: nama divisi huruf kecil). */
 export function daftarKepala() {
   const w = web();
   w.kepala ||= {};
@@ -230,7 +230,7 @@ function catatJejak(c, aksi, oleh, ket = '') {
 /**
  * Status acc satu SPPB. SPPB lama (id <= accBatasId, tanpa keputusan) = LAMA:
  * tidak perlu di-acc dan tidak masuk antrean maupun Kantor Pusat. Sisanya:
- * Menunggu Kepala Kebun → Menunggu KTU → Full Acc, atau Ditolak.
+ * Menunggu Kepala Divisi → Menunggu KTU → Full Acc, atau Ditolak.
  */
 export function statusAcc(sppbId) {
   const c = catatanAcc(sppbId);
@@ -252,18 +252,18 @@ export const waktuFullAcc = (sppbId) => {
   return c?.ktu?.waktu || c?.kepala?.waktu || '';
 };
 
-/** tahap: 'kepala' | 'ktu'. KTU hanya boleh acc setelah kepala kebun. */
+/** tahap: 'kepala' | 'ktu'. KTU hanya boleh acc setelah kepala divisi. */
 export function setujuiSppb(sppbId, tahap, oleh) {
   P.jagaAcc(sppbId,tahap);
   oleh = namaPengisi();
   if (!cari('sppb', sppbId)) throw new Error('SPPB tidak ditemukan.');
   if (tahap === 'ktu' && catatanAcc(sppbId)?.kepala?.status !== 'disetujui') {
-    throw new Error('Acc KTU menunggu acc kepala kebun dulu.');
+    throw new Error('Acc KTU menunggu acc kepala divisi dulu.');
   }
   const c = catatanAccTulis(sppbId);
   if (c[tahap]?.status === 'ditolak') throw new Error('SPPB ini sudah ditolak. Kembalikan dulu ke antrean.');
   c[tahap] = { status: 'disetujui', oleh: rapikan(oleh), waktu: sekarang() };
-  catatJejak(c, `acc ${tahap === 'ktu' ? 'KTU' : 'kepala kebun'}`, oleh);
+  catatJejak(c, `acc ${tahap === 'ktu' ? 'KTU' : 'kepala divisi'}`, oleh);
   tandaiBerubah();
 }
 
@@ -275,7 +275,7 @@ export function tolakSppb(sppbId, tahap, oleh, alasan) {
   if (!bersih) throw new Error('Alasan penolakan wajib diisi supaya koreksinya bisa ditelusuri.');
   const c = catatanAccTulis(sppbId);
   c[tahap] = { status: 'ditolak', oleh: rapikan(oleh), waktu: sekarang(), alasan: bersih };
-  catatJejak(c, `tolak ${tahap === 'ktu' ? 'KTU' : 'kepala kebun'}`, oleh, bersih);
+  catatJejak(c, `tolak ${tahap === 'ktu' ? 'KTU' : 'kepala divisi'}`, oleh, bersih);
   tandaiBerubah();
 }
 
@@ -289,21 +289,21 @@ export function batalkanAccSppb(sppbId, tahap, oleh, ket = '') {
   delete c[tahap];
   if (tahap === 'kepala' && c.ktu?.status === 'disetujui') {
     delete c.ktu;
-    catatJejak(c, 'acc KTU ikut gugur', oleh, 'acc kepala kebun dibatalkan');
+    catatJejak(c, 'acc KTU ikut gugur', oleh, 'acc kepala divisi dibatalkan');
   }
-  catatJejak(c, `batalkan ${sebelum} ${tahap === 'ktu' ? 'KTU' : 'kepala kebun'}`, oleh, ket);
+  catatJejak(c, `batalkan ${sebelum} ${tahap === 'ktu' ? 'KTU' : 'kepala divisi'}`, oleh, ket);
   tandaiBerubah();
 }
 
 /** Dipanggil otomatis saat SPPB/itemnya direvisi: semua acc gugur, kembali
- *  ke antrean kepala kebun. Tidak ada revisi yang lolos tanpa acc ulang. */
+ *  ke antrean kepala divisi. Tidak ada revisi yang lolos tanpa acc ulang. */
 export function gugurkanAcc(sppbId, ket) {
   const c = catatanAcc(sppbId);
   if (!c) return;
   const adaKeputusan = ['kepala', 'ktu'].some((t) => c[t]?.status);
   if (!adaKeputusan) return;
   const siapa = ['kepala', 'ktu'].filter((t) => c[t]?.status === 'disetujui')
-    .map((t) => (t === 'ktu' ? 'KTU' : 'kepala kebun'));
+    .map((t) => (t === 'ktu' ? 'KTU' : 'kepala divisi'));
   delete c.kepala;
   delete c.ktu;
   // ceklis order Semarang ikut gugur — isinya berubah, ordernya harus

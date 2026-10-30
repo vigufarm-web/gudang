@@ -1,19 +1,19 @@
 // persetujuan.js — Persetujuan SPPB berjenjang:
-//   1. Kepala kebun divisi pemohon (Pisang, Padi, …) meng-acc permintaannya
+//   1. Kepala divisi divisi pemohon (Pisang, Padi, …) meng-acc permintaannya
 //   2. KTU meng-acc (memeriksa)
 //   3. Full acc → tampil di monitoring Kantor Pusat sebagai order
 //
-// Tiap kepala kebun & KTU bisa dipasangi PIN (menu Pengaturan) supaya acc
+// Tiap kepala divisi & KTU bisa dipasangi PIN (menu Pengaturan) supaya acc
 // Pisang tidak bisa ditekan orang Padi. Menolak wajib beralasan dan TIDAK
 // menghapus SPPB. Acc yang telanjur diberikan bisa dibatalkan — tercatat
 // siapa dan kenapa. Semua keputusan masuk jejak audit per SPPB.
 
-import * as D from './data.js?v=2';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js?v=2';
-import { bisaEdit, spandukLokal } from './main.js?v=2';
-import { kecil } from './form-util.js?v=2';
-import { bukaDetailSppb } from './sppb.js?v=2';
-import * as P from './pengguna.js?v=2';
+import * as D from './data.js?v=3';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js?v=3';
+import { bisaEdit, spandukLokal } from './main.js?v=3';
+import { kecil } from './form-util.js?v=3';
+import { bukaDetailSppb } from './sppb.js?v=3';
+import * as P from './pengguna.js?v=3';
 
 const chipAcc = (st) => el('span.chip' + (
   st === D.STATUS_ACC.FULL ? '.chip-ok'
@@ -62,14 +62,14 @@ async function aksiAcc(s, tahap, muatUlang) {
   if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak persetujuan untuk tahap/divisi ini.','galat'); return; }
   const kepala = D.kepalaDivisi(s.divisi_pemohon);
   const pejabat = tahap === 'ktu' ? D.ktu() : kepala;
-  const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Kebun ${s.divisi_pemohon || '(tanpa divisi)'}`;
+  const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Divisi ${s.divisi_pemohon || '(tanpa divisi)'}`;
   if (tahap === 'kepala' && !kepala?.nama) {
-    pesan(`Kepala kebun untuk divisi "${s.divisi_pemohon || '(kosong)'}" belum dipasang. `
-      + 'Isi dulu di Pengaturan → Kepala kebun & tanda tangan.', 'awas', 8);
+    pesan(`Kepala divisi untuk divisi "${s.divisi_pemohon || '(kosong)'}" belum dipasang. `
+      + 'Isi dulu di Pengaturan → Kepala divisi & tanda tangan.', 'awas', 8);
     return;
   }
   if (tahap === 'ktu' && !D.ktu().nama) {
-    pesan('Nama KTU belum dipasang. Isi dulu di Pengaturan → Kepala kebun & tanda tangan.', 'awas', 8);
+    pesan('Nama KTU belum dipasang. Isi dulu di Pengaturan → Kepala divisi & tanda tangan.', 'awas', 8);
     return;
   }
   const lolos = await mintaPin(`Acc ${jabatan}`, pejabat?.pin,
@@ -86,7 +86,7 @@ async function aksiAcc(s, tahap, muatUlang) {
 async function aksiTolak(s, tahap, muatUlang) {
   if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak penolakan untuk tahap/divisi ini.','galat'); return; }
   const pejabat = tahap === 'ktu' ? D.ktu() : D.kepalaDivisi(s.divisi_pemohon);
-  const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Kebun ${s.divisi_pemohon || ''}`;
+  const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Divisi ${s.divisi_pemohon || ''}`;
   const lolos = await mintaPin(`Tolak — ${jabatan}`, pejabat?.pin,
     `Menolak SPPB ${s.no_sppb}. SPPB-nya TIDAK terhapus, hanya ditandai Ditolak.`);
   if (!lolos) return;
@@ -160,7 +160,7 @@ export async function halamanPersetujuan(wadah) {
       el('button.tombol-kecil.tombol-bahaya', { type: 'button', teks: 'Tolak', onclick: (e) => { e.stopPropagation(); aksiTolak(s, tahap, gambar); } }),
     ]);
 
-    // ---- antrean kepala kebun, dikelompokkan per divisi
+    // ---- antrean kepala divisi, dikelompokkan per divisi
     const perDivisi = new Map();
     for (const s of tungguKepala) {
       const k = kecil(s.divisi_pemohon) || '(tanpa divisi)';
@@ -175,8 +175,8 @@ export async function halamanPersetujuan(wadah) {
         el('h3', { style: 'margin:.7rem 0 .3rem' }, [
           `${divisi} `,
           el('span.bantuan', {
-            teks: kepala?.nama ? `— Kepala kebun: ${kepala.nama}${kepala.pin ? ' · PIN terpasang' : ' · tanpa PIN'}${kepala.ttd ? ' · ttd tersimpan' : ' · ttd belum ada'}`
-              : '— kepala kebun belum dipasang (Pengaturan → Kepala kebun & tanda tangan)',
+            teks: kepala?.nama ? `— Kepala divisi: ${kepala.nama}${kepala.pin ? ' · PIN terpasang' : ' · tanpa PIN'}${kepala.ttd ? ' · ttd tersimpan' : ' · ttd belum ada'}`
+              : '— kepala divisi belum dipasang (Pengaturan → Kepala divisi & tanda tangan)',
           }),
         ]),
         tabel([...kolomDasar, { l: 'Keterangan', k: 'keterangan' },
@@ -184,19 +184,19 @@ export async function halamanPersetujuan(wadah) {
         daftar, { saatKlik: (s) => bukaDetailSppb(s.id, gambar) }),
       );
     }
-    if (!tungguKepala.length) isiKepala.push(el('p.kosong', { teks: 'Tidak ada SPPB menunggu acc kepala kebun.' }));
+    if (!tungguKepala.length) isiKepala.push(el('p.kosong', { teks: 'Tidak ada SPPB menunggu acc kepala divisi.' }));
 
     taruh(tempat,
       lama.length ? el('p.petunjuk', { style: 'margin-bottom:1rem' }, [
         `${lama.length} SPPB lama (dibuat sebelum fitur persetujuan) tidak perlu di-acc dan tidak masuk `
         + 'antrean ini. Alur acc hanya berlaku untuk pengajuan baru.',
       ]) : null,
-      lembar(`Menunggu acc kepala kebun (${tungguKepala.length})`,
+      lembar(`Menunggu acc kepala divisi (${tungguKepala.length})`,
         'SPPB baru dan SPPB yang direvisi masuk ke antrean ini. Klik baris untuk melihat detail & jejaknya.',
         isiKepala),
       lembar(`Menunggu acc KTU (${tungguKtu.length})`,
         D.ktu().nama ? `KTU: ${D.ktu().nama}${D.ktu().pin ? ' · PIN terpasang' : ' · tanpa PIN'}${D.ktu().ttd ? ' · ttd tersimpan' : ' · ttd belum ada'}`
-          : 'Nama KTU belum dipasang (Pengaturan → Kepala kebun & tanda tangan).',
+          : 'Nama KTU belum dipasang (Pengaturan → Kepala divisi & tanda tangan).',
         tabel([
           ...kolomDasar,
           { l: 'Divisi', k: 'divisi_pemohon' },
@@ -207,7 +207,7 @@ export async function halamanPersetujuan(wadah) {
           saatKlik: (s) => bukaDetailSppb(s.id, gambar),
         })),
       lembar(`Ditolak (${ditolak.length})`,
-        'SPPB yang ditolak tidak terhapus. Admin merevisi isinya → otomatis kembali ke antrean kepala kebun.',
+        'SPPB yang ditolak tidak terhapus. Admin merevisi isinya → otomatis kembali ke antrean kepala divisi.',
         tabel([
           ...kolomDasar,
           { l: 'Divisi', k: 'divisi_pemohon' },

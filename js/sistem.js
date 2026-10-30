@@ -1,11 +1,11 @@
 // sistem.js — halaman Pengaturan (mode edit, token, profil perusahaan, status
 // data) dan Riwayat perubahan (daftar commit + pemulihan versi lama).
 
-import * as D from './data.js?v=2';
-import * as gh from './github.js?v=2';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, waktu, unduhTeks } from './ui.js?v=2';
-import { bisaEdit, spandukLokal, gambarUlang } from './main.js?v=2';
-import { kecil } from './form-util.js?v=2';
+import * as D from './data.js?v=3';
+import * as gh from './github.js?v=3';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, waktu, unduhTeks } from './ui.js?v=3';
+import { bisaEdit, spandukLokal, gambarUlang } from './main.js?v=3';
+import { kecil } from './form-util.js?v=3';
 
 const lembar = (judul, ...isi) => el('div.lembar', { style: 'margin-bottom:1rem' }, [
   el('div.lembar-isi', {}, [el('h2', { style: 'margin-bottom:.6rem', teks: judul }), ...isi]),
@@ -72,7 +72,7 @@ export async function halamanSistem(wadah) {
 
   // ----------------------------------------------------- simpan otomatis
   const bagianAuto = (async () => {
-    const { autoSimpanAktif, setAutoSimpan } = await import('./main.js?v=2');
+    const { autoSimpanAktif, setAutoSimpan } = await import('./main.js?v=3');
     const cek = el('input', { type: 'checkbox' });
     cek.checked = autoSimpanAktif();
     cek.addEventListener('change', () => {
@@ -129,7 +129,7 @@ export async function halamanSistem(wadah) {
     }) : el('p.bantuan', { teks: 'Masuk mode edit dulu untuk mengubah profil.' }),
   );
 
-  // ------------------------------------- kepala kebun, KTU & tanda tangan
+  // ------------------------------------- kepala divisi, KTU & tanda tangan
   const tempatPejabat = el('div');
   const gambarPejabat = () => {
     // divisi dari master + yang sudah telanjur dipakai di SPPB + yang sudah
@@ -147,7 +147,7 @@ export async function halamanSistem(wadah) {
     const dataKtu = D.ktu();
     kosongkan(tempatPejabat).append(
       tabel([
-        { l: 'Jabatan', nilai: (r) => (r.jenis === 'ktu' ? 'KTU' : `Kepala Kebun ${r.divisi}`) },
+        { l: 'Jabatan', nilai: (r) => (r.jenis === 'ktu' ? 'KTU' : `Kepala Divisi ${r.divisi}`) },
         { l: 'Nama', nilai: (r) => r.nama || '–' },
         { l: 'PIN', nilai: (r) => (r.pin ? 'terpasang' : '–') },
         { l: 'Tanda tangan', nilai: (r) => (r.ttd
@@ -160,8 +160,8 @@ export async function halamanSistem(wadah) {
       }),
     );
   };
-  const bagianPejabat = lembar('Kepala kebun, KTU & tanda tangan',
-    el('p.bantuan', { teks: 'SPPB di-acc berjenjang: kepala kebun divisi pemohon → KTU → full acc (tampil di '
+  const bagianPejabat = lembar('Kepala divisi, KTU & tanda tangan',
+    el('p.bantuan', { teks: 'SPPB di-acc berjenjang: kepala divisi divisi pemohon → KTU → full acc (tampil di '
       + 'Kantor Pusat). Pasang nama tiap pejabat, PIN-nya (supaya acc Pisang tidak bisa ditekan orang lain), '
       + 'dan gambar tanda tangannya — ttd itu ditempel otomatis di surat SPPB yang sudah di-acc. '
       + 'Semuanya tersimpan DI DALAM berkas data terenkripsi.' }),
@@ -239,7 +239,7 @@ export async function halamanSistem(wadah) {
       el('button.tombol-samar', {
         type: 'button', teks: 'Unduh berkas terenkripsi (gudang.json)',
         onclick: async () => {
-          const { kunciAmplop } = await import('./kunci.js?v=2');
+          const { kunciAmplop } = await import('./kunci.js?v=3');
           const amp = await kunciAmplop(D.state.data, D.state.password, D.state.meta || {});
           unduhTeks('gudang.json', JSON.stringify(amp), 'application/json');
         },
@@ -253,7 +253,7 @@ export async function halamanSistem(wadah) {
 }
 
 // =====================================================================
-// Form kepala kebun / KTU + pad tanda tangan
+// Form kepala divisi / KTU + pad tanda tangan
 // =====================================================================
 
 /**
@@ -446,7 +446,7 @@ function padTtd(ttdAwal) {
 }
 
 function formPejabat(r, saatSelesai) {
-  const jabatan = r.jenis === 'ktu' ? 'KTU' : `Kepala Kebun ${r.divisi}`;
+  const jabatan = r.jenis === 'ktu' ? 'KTU' : `Kepala Divisi ${r.divisi}`;
   const kNama = el('input', { type: 'text', nilai: r.nama || '', placeholder: 'Nama lengkap' });
   const kPin = el('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off',
     nilai: r.pin || '', placeholder: 'Kosongkan = tanpa PIN' });

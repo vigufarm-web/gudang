@@ -1,21 +1,21 @@
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=2';
-import * as gh from './github.js?v=2';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=2';
+import * as D from './data.js?v=3';
+import * as gh from './github.js?v=3';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=3';
 
-import { halamanDashboard } from './dashboard.js?v=2';
-import { halamanMasuk } from './masuk.js?v=2';
-import { halamanKeluar } from './keluar.js?v=2';
-import { halamanSppb } from './sppb.js?v=2';
-import { halamanLaporan } from './laporan.js?v=2';
-import { halamanMaster, MASTER } from './master.js?v=2';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=2';
-import { halamanPersetujuan } from './persetujuan.js?v=2';
-import { halamanPusat } from './pusat.js?v=2';
-import * as P from './pengguna.js?v=2';
-import { halamanPengguna } from './pengguna.js?v=2';
+import { halamanDashboard } from './dashboard.js?v=3';
+import { halamanMasuk } from './masuk.js?v=3';
+import { halamanKeluar } from './keluar.js?v=3';
+import { halamanSppb } from './sppb.js?v=3';
+import { halamanLaporan } from './laporan.js?v=3';
+import { halamanMaster, MASTER } from './master.js?v=3';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=3';
+import { halamanPersetujuan } from './persetujuan.js?v=3';
+import { halamanPusat } from './pusat.js?v=3';
+import * as P from './pengguna.js?v=3';
+import { halamanPengguna } from './pengguna.js?v=3';
 
 const akar = document.getElementById('akar');
 
@@ -26,18 +26,19 @@ const HALAMAN = {
   masuk: { l: 'Material Masuk', sub: 'Barang yang diterima gudang', buat: halamanMasuk },
   keluar: { l: 'Material Keluar', sub: 'Barang yang diambil dari gudang', buat: halamanKeluar },
   sppb: { l: 'SPPB', sub: 'Surat Permintaan Pembelian Barang & realisasinya', buat: halamanSppb },
-  persetujuan: { l: 'Persetujuan SPPB', sub: 'Admin membuat → kepala kebun yang minta meng-acc → KTU memeriksa', buat: halamanPersetujuan },
+  persetujuan: { l: 'Persetujuan SPPB', sub: 'Admin membuat → kepala divisi yang minta meng-acc → KTU memeriksa', buat: halamanPersetujuan },
   riwayat: { l: 'Riwayat perubahan', sub: 'Setiap penyimpanan tercatat di sini', buat: halamanRiwayat },
   sistem: { l: 'Pengaturan', sub: 'Mode edit, token, pejabat & ttd, profil perusahaan', buat: halamanSistem },
-  pengguna: { l: 'Pengguna', sub: 'Admin/KTU, kepala kebun, dan hak akses per divisi', buat: halamanPengguna },
+  pengguna: { l: 'Pengguna', sub: 'Admin/KTU, kepala divisi, dan hak akses per divisi', buat: halamanPengguna },
+  sandi: {l:'Ganti password/PIN',sub:'Ubah password/PIN akun Anda sendiri',buat:P.halamanSandi},
 };
 
 const KELOMPOK = [
   { judul: 'Pantauan', item: ['dashboard', 'pusat', 'laporan'] },
   { judul: 'Input data', item: ['masuk', 'keluar', 'sppb'] },
-  { judul: 'Kepala kebun & KTU', item: ['persetujuan'] },
+  { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
 ];
-const SISTEM = ['pengguna', 'riwayat', 'sistem'];
+const SISTEM = ['sandi', 'pengguna', 'riwayat', 'sistem'];
 
 // Boleh mengubah data kalau ada token, ATAU kalau dibuka tanpa repo
 // (ujicoba di komputer — hasil simpanannya diunduh sebagai berkas).

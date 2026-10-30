@@ -2,7 +2,7 @@
 export const normal = (v) => String(v || '').trim().toLowerCase();
 export const HAK = [
   ['input', 'Input transaksi baru'], ['revisi', 'Revisi dan hapus transaksi'],
-  ['kepala', 'Persetujuan kepala kebun'], ['ktu', 'Persetujuan KTU'],
+  ['kepala', 'Persetujuan kepala divisi'], ['ktu', 'Persetujuan KTU'],
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
 ];
 export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || p.hak?.[hak] === true);
