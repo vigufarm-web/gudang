@@ -212,3 +212,18 @@ Jalankan.bat / server.ps1  ujicoba di komputer sendiri
   dan ekspor ulang dari desktop MENIMPA isi item SPPB (kolom tambahan dari
   situs ikut hilang). Kalau SPPB sudah dikelola dari situs, jadikan situs
   sumber utamanya.
+
+## Monitoring SPPB
+
+Halaman SPPB mempertahankan tabel rinci, ditambah kartu ringkasan yang bisa diklik,
+pencarian nomor/material, filter divisi dan tanggal, serta tab Semua, Menunggu
+persetujuan, Siap order, Proses penerimaan dan Selesai. Persentase progres adalah
+rata-rata pemenuhan tiap item aktif; satuan barang berbeda tidak dijumlahkan.
+Klik baris membuka panel detail tanpa menghilangkan posisi daftar dan filter.
+
+SPPB lama yang dikonfirmasi pemilik telah disetujui manual dicatat sebagai
+Full Acc dengan sumber manual dan jejak pencatatan. Tanggal persetujuan asli
+tetap kosong bila tidak diketahui. Catatan manual tidak menambah tanda tangan,
+ceklis order, penerimaan, atau jumlah barang. Revisi tetap menggugurkan
+persetujuan dan mengembalikan dokumen ke antrean. Kantor Pusat menampilkan order
+aktif yang belum selesai secara bawaan; arsip selesai tersedia lewat filter.
