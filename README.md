@@ -53,6 +53,32 @@ payroll (repo `payrol`).
 
 ---
 
+## Pengguna seperti payroll
+
+Setelah membuka data dengan password data, masuk lagi memakai username dan
+password/PIN pengguna. Akun awal **OJORA** adalah **admin sekaligus KTU**.
+Password admin disimpan sebagai hash PBKDF2-SHA256 dengan salt acak dan
+600.000 iterasi di dalam berkas data terenkripsi, terpisah dari password data.
+
+Admin membuka **Pengguna → Tambah pengguna**, menentukan nama, username,
+password/PIN, divisi, dan hak akses. Pilihan peran: Kepala Kebun, Petugas Gudang,
+Kantor Pusat, Lihat saja, serta Admin/KTU. Hak dapat disesuaikan: input,
+revisi/hapus, persetujuan kepala kebun, persetujuan KTU, pembatalan, dan ceklis order.
+Admin dapat menonaktifkan pengguna. Master, Pengguna, Pengaturan dan Riwayat hanya
+untuk admin. Akun admin yang sedang masuk tidak dapat menonaktifkan atau menurunkan
+perannya sendiri. Nama pelaku persetujuan mengikuti akun yang sedang masuk.
+
+Untuk menyimpan pengaturan pengguna dan transaksi, token GitHub tetap diperlukan:
+**Pengaturan → Mode edit → Uji & simpan token**. Token hanya untuk repo `gudang`
+dengan izin Contents: Read and write; jangan masukkan token ke file data.
+Perangkat petugas yang menulis juga perlu dipasangi token secara langsung.
+
+Ini mengikuti batasan sistem payroll: pembatasan operasional di browser, bukan
+otorisasi server. Orang yang memegang password data dapat membaca seluruh berkas,
+dan pemegang token tulis dapat mengubahnya melalui GitHub di luar aplikasi.
+Daftar pengguna dan PIN tidak memisahkan kerahasiaan data antarkebun.
+Supabase tidak dipakai untuk alur ini.
+
 ## 0. Coba dulu di komputer (tanpa GitHub)
 
 1. Buka terminal/cmd di folder ini, lalu jalankan ekspor dari database desktop:
