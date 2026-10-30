@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.bak
+*.backup
+*.backup-*
+__pycache__/
+*.py[cod]
+node_modules/
