@@ -581,3 +581,28 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .approval-date-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.approval-date-buttons .aktif{background:var(--hijau-tua);color:#fff}.approval-date-notice{margin-bottom:14px}
 
 .status-extra-details{margin:1rem 0}.status-extra-details>summary{cursor:pointer;padding:.75rem 0;font-weight:600}.status-extra-details small{display:block}.rincian-tambahan small{display:block;color:var(--merah,#a83425)}
+
+/* Monitoring SPPB */
+.monitor-pengantar{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:20px}
+.monitor-pengantar h2{font-size:1.4rem;margin:0 0 6px}.monitor-pengantar p{color:var(--tinta-samar);margin:0}
+.monitor-aksi{display:flex;gap:8px;flex-shrink:0}.monitor-ringkasan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.monitor-kartu{text-align:left;background:#fff;border:1px solid #dbe6df;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;color:#253e30;box-shadow:0 3px 12px #183f2510;cursor:pointer;min-height:126px}
+.monitor-kartu strong{font-size:2rem;line-height:1.1}.monitor-kartu span{font-weight:600}.monitor-kartu small{color:#6c7d72}.monitor-kartu[aria-pressed=true]{border-color:#31734b;box-shadow:0 0 0 2px #31734b22}
+.monitor-kartu.merah strong{color:#a9443a}.monitor-kartu.kuning strong{color:#94620f}.monitor-kartu.hijau strong{color:#286541}
+.monitor-tab{display:flex;gap:6px;overflow:auto;padding-bottom:15px;border-bottom:1px solid #e5ebe7;margin-bottom:16px}
+.monitor-tab button{white-space:nowrap;background:transparent;border:0;border-radius:8px;color:#56665c;padding:10px 12px;cursor:pointer;font-weight:600}
+.monitor-tab button.aktif{background:#e5f2e9;color:#225939}.monitor-tab span{margin-left:8px;background:#edf1ef;padding:2px 6px;border-radius:6px;font-size:.78rem}
+.monitor-filter{display:grid;grid-template-columns:minmax(200px,2fr) minmax(130px,1fr) 150px 150px auto;gap:12px;align-items:end}
+.monitor-filter input,.monitor-filter select{min-height:42px;width:100%;box-sizing:border-box}.monitor-filter>button{margin-bottom:.8rem;min-height:42px}
+.monitor-hasil .tabel-bungkus{max-height:65vh;overflow:auto;border:1px solid #e0e8e3;border-radius:10px}.monitor-hasil table{min-width:920px}
+.monitor-hasil th{position:sticky;top:0;z-index:1;background:#edf5f0;padding:13px 12px!important;color:#3c5446}
+.monitor-hasil td{padding:15px 12px!important;vertical-align:middle}.monitor-hasil tr:hover td{background:#f0f7f2}
+.monitor-tanggal,.monitor-manual{display:block;color:#687b6e;font-size:.77rem;margin-top:5px}.monitor-manual{color:#52735d;max-width:155px}
+.monitor-progres{min-width:160px}.monitor-progres>div{display:flex;justify-content:space-between;gap:12px;font-size:.77rem;margin-bottom:6px}.monitor-progres strong{color:#286541;font-size:.9rem}
+.monitor-progres progress{display:block;width:100%;height:7px;accent-color:#3b8656;margin-bottom:8px;border:none;border-radius:9px;overflow:hidden}
+.monitor-progres progress::-webkit-progress-bar{background:#e6eee8}.monitor-progres progress::-webkit-progress-value{background:#3b8656;border-radius:9px}
+.monitor-alur{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:172px}.monitor-alur span{font-size:.72rem;color:#7a817c;white-space:nowrap}.monitor-alur .selesai{color:#2d7046;font-weight:600}
+.monitor-catatan{display:block;max-width:170px;white-space:normal;font-size:.82rem}
+@media(max-width:1100px){.monitor-filter{grid-template-columns:2fr 1fr 1fr}.monitor-filter>button{margin-bottom:.8rem}.monitor-pengantar{align-items:flex-start;flex-direction:column}}
+@media(max-width:640px){.monitor-ringkasan{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.monitor-kartu{padding:14px;min-height:112px}.monitor-kartu strong{font-size:1.65rem}.monitor-filter{grid-template-columns:1fr 1fr}.monitor-filter>div:first-child{grid-column:1/-1}.monitor-tab button{padding:9px}.monitor-lembar>.lembar-isi{padding:14px}}
+@media print{.monitor-tab,.monitor-filter,.monitor-aksi,.monitor-kartu small{display:none!important}.monitor-hasil .tabel-bungkus{max-height:none;overflow:visible}.monitor-hasil table{min-width:0;font-size:9px}.monitor-hasil th{position:static}.monitor-hasil td{padding:6px!important}.monitor-alur{min-width:0;display:block}.monitor-progres{min-width:0}.monitor-ringkasan{gap:8px}}
