@@ -1,29 +1,31 @@
 // masuk.js — Material Masuk: form input + tabel, dengan link opsional ke item SPPB.
 
-import * as D from './data.js?v=4';
-import * as P from './pengguna.js?v=4';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=4';
-import { bisaEdit, spandukLokal } from './main.js?v=4';
+import * as D from './data.js?v=5';
+import * as P from './pengguna.js?v=5';
+import {formTerimaOrder,formRetur} from './pengadaan-ui.js?v=5';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=5';
+import { bisaEdit, spandukLokal } from './main.js?v=5';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=4';
+} from './form-util.js?v=5';
 
 function formMasuk(barisLama, saatSelesai) {
   if (barisLama && !P.bolehUbah('material_masuk',barisLama)) return;
+  if(barisLama?.order_id)return formTerimaOrder(D.web().pesanan[barisLama.order_id],saatSelesai,barisLama);
   const tempatGalat = el('div');
   const kTanggal = inputTanggal(barisLama?.tanggal);
   const kMaterial = inputMaster('master_material', barisLama?.material || '', {
     tempat: 'Ketik untuk mencari / nama baru…',
     saatUbah: () => {
       const bawaan = D.satuanBawaan(kMaterial.value);
-      if (bawaan && !kSatuan.value) kSatuan.value = bawaan;
+      if (bawaan) kSatuan.value = bawaan;
       isiPilihanSppb();
     },
   });
   const kSatuan = inputMaster('master_satuan', barisLama?.satuan || '');
   const kQty = inputAngka(barisLama?.qty);
-  const kDivisi = inputMaster('master_divisi', barisLama?.divisi || '');
+  const kDivisi = el('input',{type:'text',nilai:barisLama?.divisi||'Gudang',readonly:true});
   const kSumber = el('input', { type: 'text', nilai: barisLama?.sumber || '', placeholder: 'Supplier / asal barang' });
   const kSppb = el('select');
   const kKet = el('textarea', { rows: 2 }, [barisLama?.keterangan || '']);
@@ -53,7 +55,7 @@ function formMasuk(barisLama, saatSelesai) {
       material: await namaFinal('master_material', kMaterial.value, 'Material'),
       satuan: D.normalkanSatuan(kSatuan.value),
       qty: Number(kQty.value),
-      divisi: await namaFinal('master_divisi', kDivisi.value, 'Divisi'),
+      divisi: barisLama?.divisi||'Gudang',
       sumber: rapikan(kSumber.value),
       sppb_item_id: kSppb.value ? Number(kSppb.value) : null,
       keterangan: rapikan(kKet.value),
@@ -76,6 +78,7 @@ function formMasuk(barisLama, saatSelesai) {
 
   const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick: simpan })];
   if (barisLama) {
+    if(P.admin())aksi.push(el('button.tombol-samar',{type:'button',teks:'Retur ke supplier',onclick:()=>formRetur(barisLama,()=>{p.tutup();saatSelesai();})}));
     aksi.unshift(el('button.tombol-bahaya', {
       type: 'button', teks: 'Hapus',
       onclick: async () => {
@@ -99,10 +102,11 @@ function formMasuk(barisLama, saatSelesai) {
     isian('Material *', kMaterial, { bantuan: 'Nama baru otomatis masuk ke Master Material.' }),
     el('div.baris-isian', {}, [
       isian('Satuan', kSatuan),
-      isian('Divisi tujuan', kDivisi),
+      isian('Lokasi stok', kDivisi),
     ]),
     isian('Sumber / supplier', kSumber),
-    isian('Link ke SPPB (opsional)', kSppb, {
+    el('a',{href:'#/ditunggu',teks:'Ada order supplier? Buka Barang ditunggu → Terima barang',style:'display:block;margin:.6rem 0'}),
+    isian('Link ke SPPB lama / tanpa order (opsional)', kSppb, {
       bantuan: 'Hanya SPPB dengan material sama yang masih ada sisa. Kosongkan kalau tidak terkait SPPB.',
     }),
     isian('Keterangan', kKet),
@@ -125,6 +129,7 @@ export async function halamanMasuk(wadah) {
         { l: 'Satuan', k: 'satuan' },
         { l: 'Divisi', k: 'divisi' },
         { l: 'Sumber', k: 'sumber' },
+        {l:'No. order',nilai:r=>D.web().pesanan?.[r.order_id]?.nomor||'—'},
         { l: 'SPPB', nilai: (r) => D.nomorSppbDariItem(r.sppb_item_id) || '–' },
         { l: 'Keterangan', k: 'keterangan' },
       ], tampil.slice(0, BATAS_TAMPIL), {

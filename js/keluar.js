@@ -1,14 +1,14 @@
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js?v=4';
-import * as P from './pengguna.js?v=4';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=4';
-import { bisaEdit, spandukLokal } from './main.js?v=4';
+import * as D from './data.js?v=5';
+import * as P from './pengguna.js?v=5';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=5';
+import { bisaEdit, spandukLokal } from './main.js?v=5';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=4';
+} from './form-util.js?v=5';
 
 function formKeluar(barisLama, saatSelesai) {
   if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;
@@ -18,7 +18,7 @@ function formKeluar(barisLama, saatSelesai) {
     tempat: 'Ketik untuk mencari / nama baru…',
     saatUbah: () => {
       const bawaan = D.satuanBawaan(kMaterial.value);
-      if (bawaan && !kSatuan.value) kSatuan.value = bawaan;
+      if (bawaan) kSatuan.value = bawaan;
       tunjukkanStok();
     },
   });
@@ -35,6 +35,10 @@ function formKeluar(barisLama, saatSelesai) {
     nilai: barisLama?.diambil_oleh || '', placeholder: 'Nama pengambil' });
   kOleh._datalist = dlOleh;
   const kKet = el('textarea', { rows: 2 }, [barisLama?.keterangan || '']);
+  const kPerlu=el('input',{type:'text',nilai:barisLama?.keperluan||'',required:true,placeholder:'Contoh: BBM pompa irigasi blok A'});
+  const kUnit=el('input',{type:'text',nilai:barisLama?.unit_pemakai||'',placeholder:'Nomor kendaraan / kode mesin / alat'});
+  const kMeter=el('input',{type:'text',nilai:barisLama?.meter_unit||'',placeholder:'Opsional: angka odometer / HM saat pengisian'});
+  const kAlasan=el('input',{type:'text',nilai:barisLama?.alasan_stok||'',placeholder:'Hanya admin, bila perlu koreksi stok'});
   const infoStok = el('small.bantuan');
 
   function tunjukkanStok() {
@@ -59,12 +63,15 @@ function formKeluar(barisLama, saatSelesai) {
       // nama pengambil: beda kapital disamakan dengan ejaan yang paling sering
       diambil_oleh: kanonikRiwayat(kOleh.value, D.baris('material_keluar').map((r) => r.diambil_oleh)),
       keterangan: rapikan(kKet.value),
+      keperluan:rapikan(kPerlu.value),unit_pemakai:rapikan(kUnit.value),meter_unit:rapikan(kMeter.value),alasan_stok:rapikan(kAlasan.value),
     };
     const galat = [];
     if (!nilai.tanggal) galat.push('Tanggal wajib diisi.');
     if (!nilai.material) galat.push('Material wajib diisi.');
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
     if (!nilai.diambil_oleh) galat.push('"Diambil oleh" wajib diisi.');
+    if(!nilai.divisi||nilai.divisi.toLowerCase()==='gudang')galat.push('Pilih divisi pemakai selain Gudang.');
+    if(!nilai.keperluan)galat.push('Keperluan pemakaian wajib diisi.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_keluar',barisLama,{...barisLama,...nilai});
@@ -104,10 +111,13 @@ function formKeluar(barisLama, saatSelesai) {
     infoStok,
     el('div.baris-isian', { style: 'margin-top:.6rem' }, [
       isian('Satuan', kSatuan),
-      isian('Divisi', kDivisi),
+      isian('Divisi pemakai *', kDivisi),
     ]),
     isian('Blok / lokasi', kBlok),
     isian('Diambil oleh *', kOleh),
+    isian('Untuk keperluan apa? *',kPerlu),
+    isian('Kendaraan / mesin / alat',kUnit),isian('KM / HM (opsional)',kMeter),
+    P.admin()?isian('Alasan pengecualian stok',kAlasan):null,
     isian('Keterangan', kKet),
   ]), aksi);
 }
@@ -129,6 +139,7 @@ export async function halamanKeluar(wadah) {
         { l: 'Blok', k: 'blok' },
         { l: 'Divisi', k: 'divisi' },
         { l: 'Diambil oleh', k: 'diambil_oleh' },
+        { l:'Keperluan',k:'keperluan' },{l:'Kendaraan / alat',k:'unit_pemakai'},
         { l: 'Keterangan', k: 'keterangan' },
       ], tampil.slice(0, BATAS_TAMPIL), {
         kosong: 'Tidak ada material keluar pada filter ini.',

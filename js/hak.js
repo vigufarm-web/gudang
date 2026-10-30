@@ -4,6 +4,7 @@ export const HAK = [
   ['input', 'Input transaksi baru'], ['revisi', 'Revisi dan hapus transaksi'],
   ['kepala', 'Persetujuan kepala divisi'], ['ktu', 'Persetujuan KTU'],
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
+  ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'],
 ];
 export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || p.hak?.[hak] === true);
 export const cakupan = (p, divisi) => !!p && p.aktif !== false &&
@@ -21,6 +22,7 @@ export function bolehTransaksi(p, aksi, tabel, lama, baru, cariSppb) {
   if (p.admin) return true;
   if (tabel.startsWith('master_')) return false;
   if (!punya(p, aksi === 'tambah' ? 'input' : 'revisi')) return false;
+  if(punya(p,'gudang')&&['material_masuk','material_keluar'].includes(tabel))return true;
   const divisi = (r) => tabel === 'sppb_items' ? cariSppb(r?.sppb_id)?.divisi_pemohon
     : tabel === 'sppb' ? r?.divisi_pemohon : r?.divisi;
   return (!lama || cakupan(p, divisi(lama))) && (!baru || cakupan(p, divisi(baru)));

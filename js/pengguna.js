@@ -1,8 +1,8 @@
-import * as D from './data.js?v=4';
-import * as H from './hak.js?v=4';
-import * as gh from './github.js?v=4';
-import {bukaAmplop, kunciAmplop} from './kunci.js?v=4';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=4';
+import * as D from './data.js?v=5';
+import * as H from './hak.js?v=5';
+import * as gh from './github.js?v=5';
+import {bukaAmplop, kunciAmplop} from './kunci.js?v=5';
+import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=5';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }
@@ -92,7 +92,7 @@ export function jagaTransaksi(aksi, tabel, lama, baru) {
   if (!H.bolehTransaksi(siapa(), aksi, tabel, lama, baru, (id) => D.cari('sppb',id))) {
     throw new Error('Hak pengguna atau cakupan divisi tidak mengizinkan perubahan ini.');
   }
-  if (!admin() && tabel === 'material_masuk') {
+  if (!admin() && !punya('gudang') && tabel === 'material_masuk') {
     for (const r of [lama,baru]) if (r?.sppb_item_id) {
       const it = D.cari('sppb_items',r.sppb_item_id), s = it && D.cari('sppb',it.sppb_id);
       if (!s || !cakupan(s.divisi_pemohon)) throw new Error('Item SPPB yang dihubungkan berada di luar cakupan divisi Anda.');
@@ -173,7 +173,7 @@ function formPengguna(wadah,p,kembali) {
   const divInputs = divisi.map((d) => [d,el('input',{type:'checkbox',checked:p?.divisi?.some((v) => H.normal(v) === H.normal(d))})]);
   const hakInputs = H.HAK.map(([k,l]) => [k,l,el('input',{type:'checkbox',checked:p?.hak?.[k]})]);
   const terapkanPeran = () => {
-    const preset = {kepala:['kepala'],gudang:['input','revisi'],pusat:['order'],lihat:[],admin:H.HAK.map(([k])=>k)}[peran.value];
+    const preset = {kepala:['kepala'],gudang:['input','revisi','gudang'],pusat:['order'],lihat:[],admin:H.HAK.map(([k])=>k)}[peran.value];
     for (const [k,,inp] of hakInputs) inp.checked = preset.includes(k);
   };
   if (!p) terapkanPeran();

@@ -4,10 +4,11 @@
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=4';
-import * as gh from './github.js?v=4';
-import { unduhTeks } from './ui.js?v=4';
-import * as P from './pengguna.js?v=4';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=5';
+import * as gh from './github.js?v=5';
+import { unduhTeks } from './ui.js?v=5';
+import * as P from './pengguna.js?v=5';
+import * as B from './pengadaan-model.js?v=5';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';
@@ -54,6 +55,10 @@ export function tandaiBerubah() {
 }
 
 export function tambah(tabel, isi) {
+  if(tabel==='material_masuk'&&isi.order_id){const o=web().pesanan?.[isi.order_id],it=o&&cari('sppb_items',o.sppb_item_id);if(!it||statusAcc(it.sppb_id)!==STATUS_ACC.FULL)throw Error('SPPB order ini belum disetujui / sedang menunggu persetujuan ulang.');}
+  if(tabel==='material_masuk'&&isi.order_id)isi=B.susunPenerimaan(state.data,isi);
+  if(tabel==='material_masuk'&&!isi.order_id){isi={...isi,divisi:'Gudang'};validasiMasukBiasa(isi);}
+  if(tabel==='material_keluar')validasiPengeluaran(isi);
   P.jagaTransaksi('tambah', tabel, null, isi);
   const r = { id: idBaru(tabel), ...isi };
   baris(tabel).push(r);
@@ -66,7 +71,14 @@ export function tambah(tabel, isi) {
 export function ubah(tabel, id, tambalan) {
   const r = cari(tabel, id);
   if (!r) throw new Error('Baris tidak ditemukan.');
+  if(tabel==='sppb_items'&&daftarOrder().some(o=>Number(o.sppb_item_id)===Number(id))&&['material','satuan','sppb_id'].some(k=>tambalan[k]!==undefined&&String(tambalan[k])!==String(r[k])))throw Error('Material, satuan dan induk item yang sudah diorder tidak boleh diganti. Buat item baru.');
+  if(tabel==='material_masuk'&&r.order_id) {
+    if(B.returBaris(state.data,id)>0)throw Error('Penerimaan ini sudah memiliki retur. Jangan ubah catatan asal.');
+    tambalan=B.susunPenerimaan(state.data,{...r,...tambalan},id);
+  }
+  if(tabel==='material_keluar')validasiPengeluaran({...r,...tambalan},id);
   P.jagaTransaksi('ubah', tabel, r, {...r,...tambalan});
+  if(tabel==='material_masuk'||tabel==='material_keluar')catatMutasi('Koreksi transaksi',tabel,id,{sebelum:{...r},sesudah:{...r,...tambalan}});
   Object.assign(r, tambalan);
   if (tabel === 'sppb') gugurkanAcc(id, 'SPPB direvisi');
   if (tabel === 'sppb_items') gugurkanAcc(r.sppb_id, `item "${r.material}" direvisi`);
@@ -79,6 +91,9 @@ export function hapus(tabel, id) {
   const i = semua.findIndex((r) => Number(r.id) === Number(id));
   if (i < 0) return false;
   P.jagaTransaksi('hapus', tabel, semua[i], null);
+  if(tabel==='sppb'&&B.semuaOrder(state.data).some(o=>baris('sppb_items').some(it=>Number(it.sppb_id)===Number(id)&&Number(o.sppb_item_id)===Number(it.id))))throw Error('SPPB sudah memiliki order. Tutup sisa order terlebih dahulu; riwayat SPPB tidak boleh dihapus.');
+  if(tabel==='sppb_items'&&B.semuaOrder(state.data).some(o=>Number(o.sppb_item_id)===Number(id)))throw Error('Item sudah memiliki order dan tidak boleh dihapus.');
+  if(tabel==='material_masuk'&&(semua[i].order_id||B.returBaris(state.data,id)>0))throw Error('Penerimaan order tidak boleh dihapus. Gunakan koreksi atau retur agar riwayat tetap utuh.');
   if (tabel === 'sppb_items') {
     gugurkanAcc(semua[i].sppb_id, `item "${semua[i].material}" dihapus`);
     // ceklis order item ini ikut dibuang — id item bisa terpakai ulang
@@ -337,7 +352,82 @@ export const jumlahMenungguAcc = () => baris('sppb')
 //   web.orderItem : { "<sppb_item_id>": { oleh, waktu } }
 // =====================================================================
 
-export const orderItem = (itemId) => web().orderItem?.[String(itemId)] || null;
+export const orderItem = (itemId) => {
+  const o=daftarOrder().find(o=>Number(o.sppb_item_id)===Number(itemId)&&!o.ditutup);
+  return o?{oleh:o.oleh,waktu:o.dibuat,rinci:true}:web().orderItem?.[String(itemId)]||null;
+};
+
+export const daftarOrder=()=>B.semuaOrder(state.data);
+export const ringkasPesanan=o=>B.ringkasOrder(state.data,o);
+export const ringkasPengadaan=it=>B.ringkasItem(state.data,it);
+function catatMutasi(aksi,tabel,id,detail={}) {
+  const jejak=web().jejakMutasi ||= {};
+  jejak[crypto.randomUUID()]={aksi,tabel,id,oleh:namaPengisi(),waktu:new Date().toISOString(),...detail};
+}
+export function tambahPesanan(raw) {
+  P.jagaOrder(raw.sppb_item_id);
+  const it=cari('sppb_items',raw.sppb_item_id);
+  if(statusAcc(it.sppb_id)!==STATUS_ACC.FULL||web().batalItem?.[String(it.id)])throw Error('Order hanya untuk item aktif dari SPPB yang sudah full acc.');
+  const id=crypto.randomUUID(),nomor=`ORD-${String(raw.tanggal||'').replaceAll('-','')}-${id.replaceAll('-','').slice(0,12).toUpperCase()}`;
+  const o=B.susunOrder(state.data,{...raw,nomor,oleh:namaPengisi(),dibuat:new Date().toISOString()},id);
+  if(daftarOrder().some(r=>r.nomor===nomor))throw Error('Nomor order bertabrakan. Coba simpan kembali.');
+  (web().pesanan ||= {})[id]=o;catatMutasi('Tambah order','pesanan',id);tandaiBerubah();return o;
+}
+export function ubahPesanan(id,raw) {
+  const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');P.jagaOrder(o.sppb_item_id);
+  if(B.ringkasOrder(state.data,o).masuk.length||o.ditutup)throw Error('Order sudah diterima/ditutup. Konversi dan jumlah asal tidak boleh diubah; gunakan order tambahan atau tutup sisa.');
+  const baru=B.susunOrder(state.data,{...o,...raw,nomor:o.nomor,sppb_item_id:o.sppb_item_id},id);
+  web().pesanan[id]=baru;catatMutasi('Koreksi order','pesanan',id,{sebelum:o,sesudah:baru});tandaiBerubah();
+}
+export function tutupSisaOrder(id,alasan) {
+  const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');P.jagaOrder(o.sppb_item_id);
+  if(o.ditutup)throw Error('Sisa order sudah ditutup.');
+  if(!alasan?.trim())throw Error('Alasan penutupan sisa wajib diisi.');
+  const r=B.ringkasOrder(state.data,o);
+  o.batal_qty_order=o.faktor_order?r.menunggu/o.faktor_order:o.qty_order;o.ditutup=true;o.alasan_tutup=alasan.trim();
+  catatMutasi('Tutup sisa order','pesanan',id,{alasan});tandaiBerubah();
+}
+export function returPenerimaan(masukId,qty,alasan) {
+  P.wajibAdmin();const m=cari('material_masuk',masukId);qty=Number(qty);
+  if(!m||!(qty>0)||!Number.isFinite(qty)||qty>B.qtyBersih(state.data,m)+1e-7||!alasan?.trim())throw Error('Jumlah retur harus positif, tidak melebihi penerimaan bersih, dan alasan wajib diisi.');
+  const stok=laporanStok().find(s=>B.norm(s.material)===B.norm(m.material)&&B.samaUnit(s.satuan,m.satuan));
+  if(qty>(stok?.stok||0)+1e-7)throw Error('Stok gudang tidak cukup untuk retur.');
+  const id=crypto.randomUUID();(web().returPenerimaan ||= {})[id]={id,masuk_id:m.id,qty_stok:qty,material:m.material,satuan:m.satuan,alasan:alasan.trim(),oleh:namaPengisi(),waktu:new Date().toISOString()};
+  catatMutasi('Retur supplier','material_masuk',m.id,{qty,alasan});tandaiBerubah();
+}
+function validasiPengeluaran(r,kecuali=null) {
+  if(B.norm(r.material)==='bbm')throw Error('Pilih jenis BBM yang sebenarnya: Pertalite, Pertamax atau Solar. Jangan gabungkan sebagai BBM.');
+  if(!r.divisi?.trim()||B.norm(r.divisi)==='gudang')throw Error('Pilih divisi pemakai selain Gudang.');
+  if(!r.keperluan?.trim())throw Error('Keperluan pemakaian wajib diisi.');
+  if(!(Number(r.qty)>0)||!Number.isFinite(Number(r.qty)))throw Error('Jumlah keluar harus positif.');
+  const master=masterDenganNama('master_material',r.material),acuan=master?.satuan_default;
+  if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Pengeluaran harus memakai satuan stok ${acuan}. Jangan mencampur satuan tanpa konversi penerimaan.`);
+  if(['pertalite','pertamax','solar'].includes(B.norm(r.material))&&!B.samaUnit(r.satuan,'Liter'))throw Error('BBM ini dicatat dalam liter. Jenis BBM tidak boleh digabung.');
+  const s=laporanStok().find(s=>B.norm(s.material)===B.norm(r.material)&&B.samaUnit(s.satuan,r.satuan));
+  const lama=kecuali?cari('material_keluar',kecuali):null;
+  const tersedia=(s?.stok||0)+(lama&&B.norm(lama.material)===B.norm(r.material)&&B.samaUnit(lama.satuan,r.satuan)?Number(lama.qty)||0:0);
+  if(Number(r.qty)>tersedia+1e-7&&!r.alasan_stok?.trim())throw Error('Jumlah melebihi stok Gudang. Periksa stok atau minta admin mencatat alasan koreksi.');
+  if(Number(r.qty)>tersedia+1e-7&&!P.admin())throw Error('Hanya admin boleh memberi pengecualian stok dengan alasan.');
+}
+function validasiMasukBiasa(r) {
+  if(B.norm(r.material)==='bbm')throw Error('Penerimaan BBM harus memilih Pertalite, Pertamax atau Solar. SPPB lama bertuliskan BBM dapat dirinci jenisnya saat menambah order.');
+  const acuan=satuanBawaan(r.material);
+  if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Penerimaan harus dicatat dalam ${acuan}, atau melalui order dengan konversi satuan.`);
+  if(r.sppb_item_id) {
+    if(daftarOrder().some(o=>Number(o.sppb_item_id)===Number(r.sppb_item_id)))throw Error('Item ini memiliki order. Catat penerimaan melalui Barang ditunggu agar sisa order akurat.');
+    const it=cari('sppb_items',r.sppb_item_id);
+    if(!it||B.norm(it.material)!==B.norm(r.material)||!B.samaUnit(it.satuan,r.satuan))throw Error('Material/satuan penerimaan harus sesuai item SPPB. Gunakan order bila perlu konversi.');
+  }
+}
+export function laporanPemakaianDivisi(kategoriFilter=null) {
+  const peta=new Map();
+  for(const r of baris('material_keluar')) {
+    const k=[B.norm(r.divisi),B.norm(r.material),B.unit(r.satuan)].join('|');
+    if(!peta.has(k))peta.set(k,{divisi:r.divisi,material:r.material,satuan:r.satuan,kategori:kategoriMaterial(r.material),keluar:0});
+    peta.get(k).keluar+=Number(r.qty)||0;
+  }
+  return [...peta.values()].filter(r=>!kategoriFilter||B.norm(r.kategori)===B.norm(kategoriFilter)).sort((a,b)=>a.divisi.localeCompare(b.divisi,'id')||a.material.localeCompare(b.material,'id'));
+}
 
 export function setItemBatal(itemId, batal, oleh, alasan = '') {
   const it = cari('sppb_items',itemId), s = it && cari('sppb',it.sppb_id);
@@ -438,11 +528,11 @@ const dekatNol = (v, batas = 0.005) => (Math.abs(v) < batas ? 0 : v);
 export function laporanStok(kategoriFilter = null) {
   const peta = new Map();   // kunci: material|satuan (huruf kecil)
   const ambil = (r) => {
-    const k = `${kecil(r.material)}|${kecil(r.satuan)}`;
+    const k = `${kecil(r.material)}|${B.unit(r.satuan)}`;
     if (!peta.has(k)) peta.set(k, { material: rapikan(r.material), satuan: rapikan(r.satuan), masuk: 0, keluar: 0 });
     return peta.get(k);
   };
-  for (const r of baris('material_masuk')) ambil(r).masuk += Number(r.qty) || 0;
+  for (const r of baris('material_masuk')) ambil(r).masuk += B.qtyBersih(state.data,r);
   for (const r of baris('material_keluar')) ambil(r).keluar += Number(r.qty) || 0;
   const hasil = [];
   for (const v of peta.values()) {
@@ -480,7 +570,7 @@ export function laporanStokDivisi(kategoriFilter = null) {
 /** Realisasi satu item SPPB = total material masuk yang di-link ke item itu. */
 export const realisasiItem = (itemId) => baris('material_masuk')
   .filter((m) => Number(m.sppb_item_id) === Number(itemId))
-  .reduce((n, m) => n + (Number(m.qty) || 0), 0);
+  .reduce((n, m) => n + B.qtySppb(state.data,m), 0);
 
 /** Semua SPPB + item + realisasi + sisa + status (padanan sppb_full_report). */
 export function laporanSppb() {
@@ -602,6 +692,20 @@ export async function simpan(pesan) {
   // Alih-alih menyerah, perubahan LOKAL digabungkan ke data TERBARU lalu
   // dicoba simpan lagi — tidak ada input siapa pun yang hilang.
   for (let percobaan = 0; ; percobaan++) {
+    const basis=state.dasarJson?JSON.parse(state.dasarJson):{};
+    for(const o of daftarOrder()){
+      const r=B.ringkasOrder(state.data,o),lama=basis.web?.pesanan?.[o.id];
+      if(lama&&r.masuk.length&&['qty_order','satuan_order','satuan_sppb','satuan_stok','faktor_order','faktor_stok'].some(k=>o[k]!==lama[k]))throw Error('Ada penerimaan pada order ini. Konversi/jumlah asal tidak boleh ditimpa; muat ulang data.');
+      if(o.ditutup&&r.total!=null&&r.batal>0&&r.batal+r.diterima>r.total+1e-7)throw Error('Penerimaan bersamaan mengubah sisa yang ditutup. Muat ulang lalu perbarui penutupan sisa.');
+    }
+    for(const o of daftarOrder())if(JSON.stringify(o)!==JSON.stringify(basis.web?.pesanan?.[o.id])&&!o.alasan_lebih){
+      const it=cari('sppb_items',o.sppb_item_id),r=it&&B.ringkasItem(state.data,it);
+      if(r&&!r.unknown&&r.diterima+r.menunggu>Number(it.qty_diminta)+1e-7)throw Error('Perubahan bersamaan menyebabkan kelebihan order. Koreksi jumlah atau catat alasan sebelum menyimpan.');
+    }
+    for(const m of baris('material_masuk'))if(m.order_id&&!m.alasan_lebih&&JSON.stringify(m)!==JSON.stringify(basis.tabel?.material_masuk?.find(r=>Number(r.id)===Number(m.id)))){
+      const o=web().pesanan?.[m.order_id],r=o&&B.ringkasOrder(state.data,o);
+      if(r&&r.total!=null&&r.diterima>r.total-r.batal+1e-7)throw Error('Penerimaan bersamaan melebihi order. Koreksi atau catat alasan pengecualian.');
+    }
     state.data.rev = (Number(state.data.rev) || 0) + 1;
     state.data.dibuat = new Date().toISOString().slice(0, 19);
     state.data.dari = namaPengisi() ? `Web — ${namaPengisi()}` : 'Web';
@@ -691,13 +795,16 @@ export function gabungTiga(dasar, lokal, remote) {
   // link material_masuk → sppb_items ikut pemetaan id baru
   const petaItem = petaId.sppb_items;
   const petaSppb = petaId.sppb;
-  for (const m of hasil.tabel.material_masuk || []) {
-    if (m.sppb_item_id != null && petaItem.has(Number(m.sppb_item_id))) {
-      m.sppb_item_id = petaItem.get(Number(m.sppb_item_id));
-    }
+  for(const asal of lokal.tabel?.material_masuk||[]){
+    const dasarRow=dasar.tabel?.material_masuk?.find(r=>Number(r.id)===Number(asal.id));
+    if(!beda(asal,dasarRow))continue;
+    const target=hasil.tabel.material_masuk.find(r=>Number(r.id)===petaId.material_masuk.get(Number(asal.id)));
+    if(target&&petaItem.has(Number(asal.sppb_item_id)))target.sppb_item_id=petaItem.get(Number(asal.sppb_item_id));
   }
-  for (const it of hasil.tabel.sppb_items || []) {
-    if (petaSppb.has(Number(it.sppb_id))) it.sppb_id = petaSppb.get(Number(it.sppb_id));
+  for(const asal of lokal.tabel?.sppb_items||[]){
+    const dasarRow=dasar.tabel?.sppb_items?.find(r=>Number(r.id)===Number(asal.id));if(!beda(asal,dasarRow))continue;
+    const target=hasil.tabel.sppb_items.find(r=>Number(r.id)===petaItem.get(Number(asal.id)));
+    if(target&&petaSppb.has(Number(asal.sppb_id)))target.sppb_id=petaSppb.get(Number(asal.sppb_id));
   }
 
   // settings & web: hanya kunci yang benar-benar diubah lokal yang menimpa.
@@ -710,8 +817,8 @@ export function gabungTiga(dasar, lokal, remote) {
       const dl = lokalB[k];
       const dd = dasarB[k];
       if (!beda(dl, dd)) continue;   // tidak diubah lokal → ikut remote
-      if (objekPolos(dl) && objekPolos(dd) && objekPolos(hasilB[k])) {
-        gabungBagian(hasilB[k], dd, dl);
+      if (objekPolos(dl) && (dd===undefined || objekPolos(dd)) && objekPolos(hasilB[k])) {
+        gabungBagian(hasilB[k], dd || {}, dl);
       } else if (dl === undefined) {
         delete hasilB[k];
       } else {
@@ -723,6 +830,8 @@ export function gabungTiga(dasar, lokal, remote) {
     hasil[bagian] ||= {};
     gabungBagian(hasil[bagian], dasar[bagian] || {}, lokal[bagian] || {});
   }
+  for(const o of Object.values(hasil.web.pesanan||{}))if(!dasar.web?.pesanan?.[o.id]&&lokal.web?.pesanan?.[o.id]&&petaItem.has(Number(o.sppb_item_id)))o.sppb_item_id=petaItem.get(Number(o.sppb_item_id));
+  for(const r of Object.values(hasil.web.returPenerimaan||{}))if(!dasar.web?.returPenerimaan?.[r.id]&&lokal.web?.returPenerimaan?.[r.id]&&petaId.material_masuk.has(Number(r.masuk_id)))r.masuk_id=petaId.material_masuk.get(Number(r.masuk_id));
 
   // catatan acc mengikuti id SPPB — kalau id SPPB baru lokal dipetakan ulang,
   // kunci catatannya ikut dipindah. (Kasus langka dua orang membuat SPPB

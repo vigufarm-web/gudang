@@ -1,7 +1,7 @@
 // form-util.js — kendali form & filter yang dipakai halaman transaksi.
 
-import * as D from './data.js?v=4';
-import { el, hariIni, tanya } from './ui.js?v=4';
+import * as D from './data.js?v=5';
+import { el, hariIni, tanya } from './ui.js?v=5';
 
 export const rapikan = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 export const kecil = (s) => rapikan(s).toLowerCase();

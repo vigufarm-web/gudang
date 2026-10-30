@@ -2,13 +2,13 @@
 // monitoring realisasi per item (dihitung otomatis dari Material Masuk yang
 // di-link), dan cetak surat permintaan ber-kop untuk persetujuan Direktur.
 
-import * as D from './data.js?v=4';
-import * as P from './pengguna.js?v=4';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=4';
-import { bisaEdit, spandukLokal } from './main.js?v=4';
-import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=4';
-import { daftarJejak } from './persetujuan.js?v=4';
-import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=4';
+import * as D from './data.js?v=5';
+import * as P from './pengguna.js?v=5';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=5';
+import { bisaEdit, spandukLokal } from './main.js?v=5';
+import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=5';
+import { daftarJejak } from './persetujuan.js?v=5';
+import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=5';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''

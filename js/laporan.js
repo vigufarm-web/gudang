@@ -1,10 +1,10 @@
 // laporan.js — Laporan WA: teks siap tempel ke WhatsApp (*bold* / _italic_),
 // padanan report_wa.py di aplikasi desktop.
 
-import * as D from './data.js?v=4';
-import { el, kosongkan, taruh, pesan, isian, hariIni } from './ui.js?v=4';
-import { spandukLokal } from './main.js?v=4';
-import { kecil, awalBulanIni } from './form-util.js?v=4';
+import * as D from './data.js?v=5';
+import { el, kosongkan, taruh, pesan, isian, hariIni } from './ui.js?v=5';
+import { spandukLokal } from './main.js?v=5';
+import { kecil, awalBulanIni } from './form-util.js?v=5';
 
 // angka ala Indonesia: 1.250 / 12,5 (maks 2 desimal, tanpa ,00)
 const fmt = (v) => {
@@ -32,6 +32,8 @@ export function laporanMasuk(dari, sampai, divisi) {
     b.push(`   Divisi: ${r.divisi || '-'} | Sumber: ${r.sumber || '-'}`);
     const no = D.nomorSppbDariItem(r.sppb_item_id);
     if (no) b.push(`   SPPB: ${no}`);
+    if(r.keperluan)b.push(`   Keperluan: ${r.keperluan}`);
+    if(r.unit_pemakai)b.push(`   Kendaraan/alat: ${r.unit_pemakai}${r.meter_unit?' | KM/HM: '+r.meter_unit:''}`);
     if (r.keterangan) b.push(`   Ket: ${r.keterangan}`);
   });
   b.push('', `Total: ${rows.length} item`);
@@ -48,6 +50,8 @@ export function laporanKeluar(dari, sampai, divisi) {
     b.push(`${i + 1}. ${r.material} — ${fmt(r.qty)} ${r.satuan || ''}`.trimEnd());
     b.push(`   Blok: ${r.blok || '-'} | Divisi: ${r.divisi || '-'}`);
     b.push(`   Diambil oleh: ${r.diambil_oleh || '-'}`);
+    if(r.keperluan)b.push(`   Keperluan: ${r.keperluan}`);
+    if(r.unit_pemakai)b.push(`   Kendaraan/alat: ${r.unit_pemakai}${r.meter_unit?' | KM/HM: '+r.meter_unit:''}`);
     if (r.keterangan) b.push(`   Ket: ${r.keterangan}`);
   });
   b.push('', `Total: ${rows.length} item`);
@@ -55,21 +59,12 @@ export function laporanKeluar(dari, sampai, divisi) {
 }
 
 export function laporanStokDivisi(kategori) {
-  const rows = D.laporanStokDivisi(kategori || null);
-  const b = ['*LAPORAN STOK MATERIAL PER DIVISI*'];
-  if (kategori) b.push(`Kategori: ${kategori}`);
-  b.push(`Per tanggal: ${hariIni()}`, '');
-  if (!rows.length) { b.push('_Tidak ada data stok untuk filter ini._'); return b.join('\n'); }
-  let divisiKini = null;
-  for (const r of rows) {
-    const d = r.divisi || '(Tanpa Divisi)';
-    if (d !== divisiKini) {
-      if (divisiKini !== null) b.push('');
-      b.push(`📍 *${d}*`);
-      divisiKini = d;
-    }
-    b.push(`  • ${r.material}: ${fmt(r.stok)} ${r.satuan || ''}`.trimEnd());
-  }
+  const rows=D.laporanStok(kategori||null);
+  const b=['*LAPORAN STOK GUDANG*',`Per tanggal: ${hariIni()}`];
+  if(kategori)b.push(`Kategori: ${kategori}`);
+  b.push('Stok hanya berada di Gudang; barang keluar menjadi pemakaian divisi.','');
+  for(const r of rows)b.push(`• ${r.material}: ${fmt(r.stok)} ${r.satuan||''}`);
+  if(!rows.length)b.push('_Tidak ada data stok._');
   return b.join('\n');
 }
 
@@ -86,7 +81,7 @@ const JENIS = [
   { k: 'harian', l: 'Laporan Harian Lengkap (masuk + keluar + stok)' },
   { k: 'masuk', l: 'Laporan Material Masuk' },
   { k: 'keluar', l: 'Laporan Material Keluar' },
-  { k: 'stok', l: 'Laporan Stok per Divisi' },
+  { k: 'stok', l: 'Laporan Stok Gudang' },
 ];
 
 export async function halamanLaporan(wadah) {

@@ -1,27 +1,29 @@
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=4';
-import * as gh from './github.js?v=4';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=4';
+import * as D from './data.js?v=5';
+import * as gh from './github.js?v=5';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=5';
 
-import { halamanDashboard } from './dashboard.js?v=4';
-import { halamanMasuk } from './masuk.js?v=4';
-import { halamanKeluar } from './keluar.js?v=4';
-import { halamanSppb } from './sppb.js?v=4';
-import { halamanLaporan } from './laporan.js?v=4';
-import { halamanMaster, MASTER } from './master.js?v=4';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=4';
-import { halamanPersetujuan } from './persetujuan.js?v=4';
-import { halamanPusat } from './pusat.js?v=4';
-import * as P from './pengguna.js?v=4';
-import { halamanPengguna } from './pengguna.js?v=4';
+import { halamanDashboard } from './dashboard.js?v=5';
+import { halamanMasuk } from './masuk.js?v=5';
+import { halamanKeluar } from './keluar.js?v=5';
+import { halamanSppb } from './sppb.js?v=5';
+import { halamanLaporan } from './laporan.js?v=5';
+import { halamanMaster, MASTER } from './master.js?v=5';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=5';
+import { halamanPersetujuan } from './persetujuan.js?v=5';
+import { halamanPusat } from './pusat.js?v=5';
+import {halamanPengadaan} from './pengadaan-ui.js?v=5';
+import * as P from './pengguna.js?v=5';
+import { halamanPengguna } from './pengguna.js?v=5';
 
 const akar = document.getElementById('akar');
 
 const HALAMAN = {
   dashboard: { l: 'Dashboard', sub: 'Stok saat ini dan SPPB yang belum lengkap', buat: halamanDashboard },
-  pusat: { l: 'Kantor Pusat', sub: 'Admin Semarang menceklis order dari SPPB yang sudah full acc', buat: halamanPusat },
+  pusat: { l: 'Kantor Pusat / Order', sub: 'Order bertahap, satuan supplier dan konversi', buat:w=>halamanPengadaan(w,false) },
+  ditunggu:{l:'Barang ditunggu',sub:'Order terbuka dan penerimaan bertahap ke Gudang',buat:w=>halamanPengadaan(w,true)},
   laporan: { l: 'Laporan WA', sub: 'Teks laporan siap tempel ke WhatsApp', buat: halamanLaporan },
   masuk: { l: 'Material Masuk', sub: 'Barang yang diterima gudang', buat: halamanMasuk },
   keluar: { l: 'Material Keluar', sub: 'Barang yang diambil dari gudang', buat: halamanKeluar },
@@ -34,7 +36,7 @@ const HALAMAN = {
 };
 
 const KELOMPOK = [
-  { judul: 'Pantauan', item: ['dashboard', 'pusat', 'laporan'] },
+  { judul: 'Pantauan', item: ['dashboard', 'pusat', 'ditunggu', 'laporan'] },
   { judul: 'Input data', item: ['masuk', 'keluar', 'sppb'] },
   { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
 ];
