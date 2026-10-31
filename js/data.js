@@ -1,4 +1,4 @@
-import {assertGISMerge,captureGISSnapshot,assertGISMasterEdit,assertGISBlockActive,assertGISMasterStructure} from './gis-model.js';
+import {assertGISMerge,captureGISSnapshot,assertGISMasterEdit,assertGISBlockActive,assertGISMasterStructure} from './gis-model.js?v=gis-pages-3';
 import * as W from './workflow.js?v=8';
 import {jenisBbm} from './bbm-model.js?v=8';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
@@ -685,7 +685,7 @@ export async function muat(password) {
   state.belumDisimpan = false;
   state.dasarJson = JSON.stringify(data);
   gh.setTokenBersama(data.web?.token || '');
-  import('./gis-panel.js?v=gis-pages-2').then(m=>m.startGISAuto({D:{state},app:'gudang',isAdmin:P.admin,canEdit:()=>!!gh.ambilToken(),markChanged:tandaiBerubah})).catch(()=>{});
+  import('./gis-panel.js?v=gis-pages-3').then(m=>m.startGISAuto({D:{state},app:'gudang',isAdmin:P.admin,canEdit:()=>!!gh.ambilToken(),markChanged:tandaiBerubah})).catch(()=>{});
   return data;
 }
 
