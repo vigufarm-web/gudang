@@ -1,20 +1,22 @@
+import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=6';
+import {pilihanUnitBbm} from './bbm.js?v=6';
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js?v=5';
-import * as P from './pengguna.js?v=5';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=5';
-import { bisaEdit, spandukLokal } from './main.js?v=5';
+import * as D from './data.js?v=6';
+import * as P from './pengguna.js?v=6';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=6';
+import { bisaEdit, spandukLokal } from './main.js?v=6';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=5';
+} from './form-util.js?v=6';
 
-function formKeluar(barisLama, saatSelesai) {
+function formKeluar(barisLama, saatSelesai, bbm=false) {
   if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;
   const tempatGalat = el('div');
   const kTanggal = inputTanggal(barisLama?.tanggal);
-  const kMaterial = inputMaster('master_material', barisLama?.material || '', {
+  const kMaterial = bbm ? el('select',{},[el('option',{value:'',teks:'Pilih jenis BBM…'}),...JENIS_BBM.map(n=>el('option',{value:D.masterDenganNama('master_material',n)?.nama||n,teks:n,selected:n.toLowerCase()===barisLama?.material?.toLowerCase()}))]) : inputMaster('master_material', barisLama?.material || '', {
     tempat: 'Ketik untuk mencari / nama baru…',
     saatUbah: () => {
       const bawaan = D.satuanBawaan(kMaterial.value);
@@ -22,7 +24,7 @@ function formKeluar(barisLama, saatSelesai) {
       tunjukkanStok();
     },
   });
-  const kSatuan = inputMaster('master_satuan', barisLama?.satuan || '');
+  const kSatuan = bbm ? el('input',{nilai:'Liter',readonly:true}) : inputMaster('master_satuan', barisLama?.satuan || '');
   const kQty = inputAngka(barisLama?.qty);
   const kBlok = inputMaster('master_blok', barisLama?.blok || '');
   const kDivisi = inputMaster('master_divisi', barisLama?.divisi || '');
@@ -37,7 +39,7 @@ function formKeluar(barisLama, saatSelesai) {
   const kKet = el('textarea', { rows: 2 }, [barisLama?.keterangan || '']);
   const kPerlu=el('input',{type:'text',nilai:barisLama?.keperluan||'',required:true,placeholder:'Contoh: BBM pompa irigasi blok A'});
   const kUnit=el('input',{type:'text',nilai:barisLama?.unit_pemakai||'',placeholder:'Nomor kendaraan / kode mesin / alat'});
-  const kMeter=el('input',{type:'text',nilai:barisLama?.meter_unit||'',placeholder:'Opsional: angka odometer / HM saat pengisian'});
+  const unitBbm=bbm?pilihanUnitBbm(barisLama):null;
   const kAlasan=el('input',{type:'text',nilai:barisLama?.alasan_stok||'',placeholder:'Hanya admin, bila perlu koreksi stok'});
   const infoStok = el('small.bantuan');
 
@@ -50,6 +52,7 @@ function formKeluar(barisLama, saatSelesai) {
       : 'Material ini belum pernah tercatat masuk.';
   }
   tunjukkanStok();
+  if(bbm)kMaterial.addEventListener('change',tunjukkanStok);
 
   const simpan = async () => {
     const nilai = {
@@ -63,11 +66,12 @@ function formKeluar(barisLama, saatSelesai) {
       // nama pengambil: beda kapital disamakan dengan ejaan yang paling sering
       diambil_oleh: kanonikRiwayat(kOleh.value, D.baris('material_keluar').map((r) => r.diambil_oleh)),
       keterangan: rapikan(kKet.value),
-      keperluan:rapikan(kPerlu.value),unit_pemakai:rapikan(kUnit.value),meter_unit:rapikan(kMeter.value),alasan_stok:rapikan(kAlasan.value),
+      keperluan:rapikan(kPerlu.value),unit_pemakai:rapikan(kUnit.value),...(unitBbm?unitBbm.ambil():{}),alasan_stok:rapikan(kAlasan.value),
     };
     const galat = [];
     if (!nilai.tanggal) galat.push('Tanggal wajib diisi.');
     if (!nilai.material) galat.push('Material wajib diisi.');
+    if(!bbm&&adalahBbm(nilai))galat.push('Catat transaksi BBM melalui menu BBM Keluar.');
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
     if (!nilai.diambil_oleh) galat.push('"Diambil oleh" wajib diisi.');
     if(!nilai.divisi||nilai.divisi.toLowerCase()==='gudang')galat.push('Pilih divisi pemakai selain Gudang.');
@@ -101,13 +105,13 @@ function formKeluar(barisLama, saatSelesai) {
     }));
   }
 
-  const p = panel(barisLama ? 'Ubah material keluar' : 'Catat material keluar', el('div', {}, [
+  const p = panel(bbm ? (barisLama?'Ubah BBM keluar':'Catat BBM keluar') : (barisLama ? 'Ubah material keluar' : 'Catat material keluar'), el('div', {}, [
     tempatGalat,
     el('div.baris-isian', {}, [
       isian('Tanggal *', kTanggal),
-      isian('Qty *', kQty),
+      isian(bbm?'Jumlah liter *':'Qty *', kQty),
     ]),
-    isian('Material *', kMaterial),
+    isian(bbm?'Jenis BBM *':'Material *', kMaterial),
     infoStok,
     el('div.baris-isian', { style: 'margin-top:.6rem' }, [
       isian('Satuan', kSatuan),
@@ -116,19 +120,19 @@ function formKeluar(barisLama, saatSelesai) {
     isian('Blok / lokasi', kBlok),
     isian('Diambil oleh *', kOleh),
     isian('Untuk keperluan apa? *',kPerlu),
-    isian('Kendaraan / mesin / alat',kUnit),isian('KM / HM (opsional)',kMeter),
+    unitBbm?unitBbm.elemen:isian('Kendaraan / mesin / alat',kUnit),
     P.admin()?isian('Alasan pengecualian stok',kAlasan):null,
     isian('Keterangan', kKet),
   ]), aksi);
 }
 
-export async function halamanKeluar(wadah) {
+export async function halamanKeluar(wadah, bbm=false) {
   const tempatTabel = el('div');
   const tempatRingkas = el('span.bantuan');
 
   const gambarTabel = () => {
-    const semua = [...D.baris('material_keluar')].sort(urutTanggalTurun);
-    const tampil = saring(semua, filter.ambil(), ['material', 'divisi', 'blok', 'diambil_oleh', 'keterangan', 'satuan']);
+    const semua = D.baris('material_keluar').filter(r=>adalahBbm(r)===bbm).sort(urutTanggalTurun);
+    const tampil = saring(semua, filter.ambil(), ['material', 'divisi', 'blok', 'diambil_oleh', 'keterangan', 'satuan','keperluan','unit_pemakai']);
     tempatRingkas.textContent = `${angka(tampil.length)} baris`;
     kosongkan(tempatTabel).append(
       tabel([
@@ -143,7 +147,7 @@ export async function halamanKeluar(wadah) {
         { l: 'Keterangan', k: 'keterangan' },
       ], tampil.slice(0, BATAS_TAMPIL), {
         kosong: 'Tidak ada material keluar pada filter ini.',
-        saatKlik: bisaEdit() ? (r) => { if (P.bolehUbah('material_keluar',r)) formKeluar(r,gambarTabel); else pesan('Tidak memiliki hak revisi untuk divisi ini.','awas'); } : null,
+        saatKlik: bisaEdit() ? (r) => { if (P.bolehUbah('material_keluar',r)) formKeluar(r,gambarTabel,bbm); else pesan('Tidak memiliki hak revisi untuk divisi ini.','awas'); } : null,
       }),
       catatanBatas(tampil.length),
     );
@@ -156,8 +160,8 @@ export async function halamanKeluar(wadah) {
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem' }, [
         bisaEdit() && P.bolehInput() ? el('button.tombol-utama', {
-          type: 'button', teks: '+ Catat material keluar',
-          onclick: () => formKeluar(null, gambarTabel),
+          type: 'button', teks: bbm?'+ Catat BBM keluar':'+ Catat material keluar',
+          onclick: () => formKeluar(null, gambarTabel,bbm),
         }) : null,
         tempatRingkas,
       ]),

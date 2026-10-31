@@ -8,12 +8,12 @@
 // menghapus SPPB. Acc yang telanjur diberikan bisa dibatalkan — tercatat
 // siapa dan kenapa. Semua keputusan masuk jejak audit per SPPB.
 
-import * as D from './data.js?v=5';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js?v=5';
-import { bisaEdit, spandukLokal } from './main.js?v=5';
-import { kecil } from './form-util.js?v=5';
-import { bukaDetailSppb } from './sppb.js?v=5';
-import * as P from './pengguna.js?v=5';
+import * as D from './data.js?v=6';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, isian, tabel, angka, tanggal, waktu } from './ui.js?v=6';
+import { bisaEdit, spandukLokal } from './main.js?v=6';
+import { kecil } from './form-util.js?v=6';
+import { bukaDetailSppb } from './sppb.js?v=6';
+import * as P from './pengguna.js?v=6';
 
 const chipAcc = (st) => el('span.chip' + (
   st === D.STATUS_ACC.FULL ? '.chip-ok'

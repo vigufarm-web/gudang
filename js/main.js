@@ -1,22 +1,23 @@
+import {halamanBbm} from './bbm.js?v=6';
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=5';
-import * as gh from './github.js?v=5';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=5';
+import * as D from './data.js?v=6';
+import * as gh from './github.js?v=6';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=6';
 
-import { halamanDashboard } from './dashboard.js?v=5';
-import { halamanMasuk } from './masuk.js?v=5';
-import { halamanKeluar } from './keluar.js?v=5';
-import { halamanSppb } from './sppb.js?v=5';
-import { halamanLaporan } from './laporan.js?v=5';
-import { halamanMaster, MASTER } from './master.js?v=5';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=5';
-import { halamanPersetujuan } from './persetujuan.js?v=5';
-import { halamanPusat } from './pusat.js?v=5';
-import {halamanPengadaan} from './pengadaan-ui.js?v=5';
-import * as P from './pengguna.js?v=5';
-import { halamanPengguna } from './pengguna.js?v=5';
+import { halamanDashboard } from './dashboard.js?v=6';
+import { halamanMasuk } from './masuk.js?v=6';
+import { halamanKeluar } from './keluar.js?v=6';
+import { halamanSppb } from './sppb.js?v=6';
+import { halamanLaporan } from './laporan.js?v=6';
+import { halamanMaster, MASTER } from './master.js?v=6';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=6';
+import { halamanPersetujuan } from './persetujuan.js?v=6';
+import { halamanPusat } from './pusat.js?v=6';
+import {halamanPengadaan} from './pengadaan-ui.js?v=6';
+import * as P from './pengguna.js?v=6';
+import { halamanPengguna } from './pengguna.js?v=6';
 
 const akar = document.getElementById('akar');
 
@@ -25,6 +26,9 @@ const HALAMAN = {
   pusat: { l: 'Kantor Pusat / Order', sub: 'Order bertahap, satuan supplier dan konversi', buat:w=>halamanPengadaan(w,false) },
   ditunggu:{l:'Barang ditunggu',sub:'Order terbuka dan penerimaan bertahap ke Gudang',buat:w=>halamanPengadaan(w,true)},
   laporan: { l: 'Laporan WA', sub: 'Teks laporan siap tempel ke WhatsApp', buat: halamanLaporan },
+  bbm:{l:'BBM',sub:'Stok Gudang · Solar, Pertalite dan Pertamax',buat:halamanBbm},
+  'bbm-masuk':{l:'BBM Masuk',sub:'Penerimaan BBM ke Gudang',buat:w=>halamanMasuk(w,true)},
+  'bbm-keluar':{l:'BBM Keluar',sub:'Pemakaian BBM untuk divisi dan unit',buat:w=>halamanKeluar(w,true)},
   masuk: { l: 'Material Masuk', sub: 'Barang yang diterima gudang', buat: halamanMasuk },
   keluar: { l: 'Material Keluar', sub: 'Barang yang diambil dari gudang', buat: halamanKeluar },
   sppb: { l: 'SPPB', sub: 'Surat Permintaan Pembelian Barang & realisasinya', buat: halamanSppb },
@@ -38,6 +42,7 @@ const HALAMAN = {
 const KELOMPOK = [
   { judul: 'Pantauan', item: ['dashboard', 'pusat', 'ditunggu', 'laporan'] },
   { judul: 'Input data', item: ['masuk', 'keluar', 'sppb'] },
+  { judul: 'BBM', item: ['bbm','bbm-masuk','bbm-keluar'] },
   { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
 ];
 const SISTEM = ['sandi', 'pengguna', 'riwayat', 'sistem'];

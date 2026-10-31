@@ -1,14 +1,15 @@
+import {jenisBbm} from './bbm-model.js?v=6';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
 //
 // Satu file data = seluruh isi gudang.db aplikasi desktop, dikemas jadi satu
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=5';
-import * as gh from './github.js?v=5';
-import { unduhTeks } from './ui.js?v=5';
-import * as P from './pengguna.js?v=5';
-import * as B from './pengadaan-model.js?v=5';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=6';
+import * as gh from './github.js?v=6';
+import { unduhTeks } from './ui.js?v=6';
+import * as P from './pengguna.js?v=6';
+import * as B from './pengadaan-model.js?v=6';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';
@@ -76,6 +77,7 @@ export function ubah(tabel, id, tambalan) {
     if(B.returBaris(state.data,id)>0)throw Error('Penerimaan ini sudah memiliki retur. Jangan ubah catatan asal.');
     tambalan=B.susunPenerimaan(state.data,{...r,...tambalan},id);
   }
+  if(tabel==='material_masuk'&&!r.order_id){if(B.returBaris(state.data,id)>0)throw Error('Penerimaan yang sudah diretur tidak boleh diubah.');validasiMasukBiasa({...r,...tambalan});}
   if(tabel==='material_keluar')validasiPengeluaran({...r,...tambalan},id);
   P.jagaTransaksi('ubah', tabel, r, {...r,...tambalan});
   if(tabel==='material_masuk'||tabel==='material_keluar')catatMutasi('Koreksi transaksi',tabel,id,{sebelum:{...r},sesudah:{...r,...tambalan}});
@@ -396,6 +398,10 @@ export function returPenerimaan(masukId,qty,alasan) {
   catatMutasi('Retur supplier','material_masuk',m.id,{qty,alasan});tandaiBerubah();
 }
 function validasiPengeluaran(r,kecuali=null) {
+  if(jenisBbm(r.material)&&r.jenis_unit){
+    if(!['ALB','Kendaraan','Alsintan','Lainnya'].includes(r.jenis_unit)||!r.unit_pemakai?.trim())throw Error('Unit pemakai BBM wajib valid dan diisi.');
+    if(r.sumber_unit==='payroll'){const u=web().unitPayroll?.daftar?.find(u=>String(u.id)===String(r.payroll_unit_id));if(!u||!['ALB','Kendaraan'].includes(r.jenis_unit)||(r.jenis_unit==='ALB'?u.kategori!=='ALAT BERAT':!['KENDARAAN','DUMP TRUCK'].includes(u.kategori)))throw Error('Referensi unit payroll tidak sesuai. Pilih ulang atau gunakan input manual.');}
+  }
   if(B.norm(r.material)==='bbm')throw Error('Pilih jenis BBM yang sebenarnya: Pertalite, Pertamax atau Solar. Jangan gabungkan sebagai BBM.');
   if(!r.divisi?.trim()||B.norm(r.divisi)==='gudang')throw Error('Pilih divisi pemakai selain Gudang.');
   if(!r.keperluan?.trim())throw Error('Keperluan pemakaian wajib diisi.');
@@ -410,6 +416,8 @@ function validasiPengeluaran(r,kecuali=null) {
   if(Number(r.qty)>tersedia+1e-7&&!P.admin())throw Error('Hanya admin boleh memberi pengecualian stok dengan alasan.');
 }
 function validasiMasukBiasa(r) {
+  if(!(Number(r.qty)>0)||!Number.isFinite(Number(r.qty)))throw Error('Jumlah penerimaan harus positif.');
+  if(jenisBbm(r.material)&&!B.samaUnit(r.satuan,'Liter'))throw Error('Penerimaan BBM harus memakai liter.');
   if(B.norm(r.material)==='bbm')throw Error('Penerimaan BBM harus memilih Pertalite, Pertamax atau Solar. SPPB lama bertuliskan BBM dapat dirinci jenisnya saat menambah order.');
   const acuan=satuanBawaan(r.material);
   if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Penerimaan harus dicatat dalam ${acuan}, atau melalui order dengan konversi satuan.`);
@@ -706,6 +714,8 @@ export async function simpan(pesan) {
       const o=web().pesanan?.[m.order_id],r=o&&B.ringkasOrder(state.data,o);
       if(r&&r.total!=null&&r.diterima>r.total-r.batal+1e-7)throw Error('Penerimaan bersamaan melebihi order. Koreksi atau catat alasan pengecualian.');
     }
+    // Recheck after merging: two devices must not spend the same fuel balance.
+    for(const r of baris('material_keluar'))if(jenisBbm(r.material)&&JSON.stringify(r)!==JSON.stringify(basis.tabel?.material_keluar?.find(x=>Number(x.id)===Number(r.id))))validasiPengeluaran(r,r.id);
     state.data.rev = (Number(state.data.rev) || 0) + 1;
     state.data.dibuat = new Date().toISOString().slice(0, 19);
     state.data.dari = namaPengisi() ? `Web — ${namaPengisi()}` : 'Web';

@@ -1,8 +1,8 @@
-import * as D from './data.js?v=5';
-import * as H from './hak.js?v=5';
-import * as gh from './github.js?v=5';
-import {bukaAmplop, kunciAmplop} from './kunci.js?v=5';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=5';
+import * as D from './data.js?v=6';
+import * as H from './hak.js?v=6';
+import * as gh from './github.js?v=6';
+import {bukaAmplop, kunciAmplop} from './kunci.js?v=6';
+import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=6';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }

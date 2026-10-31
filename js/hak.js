@@ -13,7 +13,7 @@ export function bolehHalaman(p, halaman) {
   if (!p || p.aktif === false) return false;
   if (p.admin) return true;
   if (['pengguna', 'sistem', 'riwayat', 'master'].includes(halaman)) return false;
-  if (['masuk', 'keluar', 'sppb'].includes(halaman)) return punya(p, 'input') || punya(p, 'revisi');
+  if (['masuk', 'keluar', 'bbm-masuk', 'bbm-keluar', 'sppb'].includes(halaman)) return punya(p, 'input') || punya(p, 'revisi');
   if (halaman === 'persetujuan') return punya(p, 'kepala') || punya(p, 'ktu') || punya(p, 'batal');
   return true;
 }
