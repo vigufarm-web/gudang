@@ -257,3 +257,10 @@ pemakaian semua divisi. Hak pengguna lama tidak diperluas diam-diam; admin
 dapat menambahkan hak Gudang lewat Pengguna. Token GitHub tetap diperlukan
 pada setiap perangkat yang menulis. Ceklis order lama tetap ditandai sebagai
 jumlah belum dirinci; tidak dianggap seluruh permintaan sudah dipesan.
+
+
+## BBM terpisah
+
+Menu BBM menampilkan stok Solar, Pertalite dan Pertamax. BBM Masuk/Keluar menyaring catatan yang sama pada material_masuk/material_keluar, bukan menyalinnya ke tabel lain. Daftar Material Masuk/Keluar menyembunyikan BBM. Transaksi lama bernama BBM tetap menjadi arsip tanpa menebak jenisnya. Penerimaan baru masuk Gudang, pemakaian memilih divisi tujuan, jenis unit, unit, pengambil dan keperluan. HM/KM tidak diminta; nilai historis tetap disimpan.
+
+ALB dan kendaraan dapat memakai referensi unit aktif dari bagian Alat Berat & Kendaraan pada repo vigufarm-web/payrol. Admin memuat data terenkripsi memakai password bagian tersebut di perangkatnya atau memilih berkas terenkripsi; hanya id, kode, nama, kategori dan nomor polisi unit disalin ke data Gudang terenkripsi. Password, token, HM/KM, operator dan upah tidak disimpan. Referensi diperbarui lewat tombol Muat / perbarui unit payroll. Riwayat transaksi menyimpan ID dan label unit pada saat input. Input manual selalu tersedia; Alsintan manual. Tautan payroll membuka aplikasi asal, lalu pilih bagian Alat Berat & Kendaraan. Tidak ada penulisan transaksi ke payroll maupun sinkron HM/KM.
