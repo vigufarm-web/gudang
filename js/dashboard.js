@@ -1,12 +1,17 @@
+import * as P from './pengguna.js?v=8';
+import * as W from './workflow.js?v=8';
+import {inputMaster} from './form-util.js?v=8';
+import {norm,samaUnit} from './pengadaan-model.js?v=8';
 // dashboard.js — kartu ringkasan, tabel stok (gudang / per divisi, filter
 // kategori), dan daftar SPPB yang belum/sebagian direalisasi.
 
-import * as D from './data.js?v=7';
-import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js?v=7';
-import { spandukLokal } from './main.js?v=7';
-import { kecil } from './form-util.js?v=7';
+import * as D from './data.js?v=8';
+import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js?v=8';
+import { spandukLokal } from './main.js?v=8';
+import { kecil } from './form-util.js?v=8';
 
 export async function halamanDashboard(wadah) {
+  if(P.mandor())return dashboardMandor(wadah);
   let kategori = '';
   let perDivisi = false;
   let kata = '';
@@ -104,4 +109,13 @@ export async function halamanDashboard(wadah) {
     ])]),
   );
   gambarStok();
+}
+
+function dashboardMandor(wadah){
+ const docs=W.permintaanTerlihat(),pending=docs.filter(o=>['Draf','Diajukan','Acc Kepala Divisi'].includes(o.status)),sisa=docs.filter(o=>o.status==='Full Acc'&&W.rincian(o).some(r=>r.sisa>1e-7));
+ const cards=el('div.angka-utama',{},[['Permintaan saya',docs.length],['Belum full acc',pending.length],['Menunggu / sebagian diserahkan',sisa.length]].map(([l,v])=>el('div',{},[el('dl',{},[el('dt',{teks:l}),el('dd',{teks:angka(v)})])])));
+ const info=el('p',{role:'status','aria-live':'polite',teks:'Pilih material untuk melihat stok Gudang berdasarkan data yang dimuat.'});
+ const material=inputMaster('master_material','',{tempat:'Cari material untuk permintaan…',saatUbah:tampilStok});material.setAttribute('aria-label','Cek stok material');material.addEventListener('input',tampilStok);
+ function tampilStok(){const m=D.masterDenganNama('master_material',material.value);if(!m){info.textContent='Pilih material yang terdaftar.';return;}const r=D.laporanStok().find(r=>norm(r.material)===norm(m.nama)&&samaUnit(r.satuan,m.satuan_default));info.textContent=`Stok Gudang ${m.nama}: ${angka(r?.stok||0,2)} ${m.satuan_default||''} · berdasarkan data yang dimuat.`;}
+ taruh(wadah,el('p',{teks:'Ringkasan permintaan Anda untuk divisi: '+(P.siapa()?.divisi||[]).join(', ')}),cards,el('div.lembar',{style:'padding:1rem;margin:1rem 0'},[el('h2',{teks:'Cek stok material'}),material,material._datalist,info]),el('a.tombol',{href:'#/permintaan',teks:'Buka permintaan saya'}),el('h2',{teks:'Permintaan saya',style:'margin-top:1rem'}),tabel([{l:'Nomor',k:'nomor'},{l:'Tanggal',k:'tanggal'},{l:'Divisi',k:'divisi'},{l:'Status',nilai:o=>o.status==='Full Acc'?(W.rincian(o).every(r=>r.sisa<1e-7)?'Selesai':'Full Acc · proses penyerahan'):o.status},{l:'Material',nilai:o=>o.items.map(it=>it.material).join(', ')}],docs,{kosong:'Belum ada permintaan Anda.'}));
 }

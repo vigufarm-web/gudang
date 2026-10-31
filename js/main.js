@@ -1,24 +1,24 @@
-import {halamanPermintaan,halamanOpname} from './workflow-ui.js?v=7';
-import {halamanBbm} from './bbm.js?v=7';
+import {halamanPermintaan,halamanOpname} from './workflow-ui.js?v=8';
+import {halamanBbm} from './bbm.js?v=8';
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=7';
-import * as gh from './github.js?v=7';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=7';
+import * as D from './data.js?v=8';
+import * as gh from './github.js?v=8';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=8';
 
-import { halamanDashboard } from './dashboard.js?v=7';
-import { halamanMasuk } from './masuk.js?v=7';
-import { halamanKeluar } from './keluar.js?v=7';
-import { halamanSppb } from './sppb.js?v=7';
-import { halamanLaporan } from './laporan.js?v=7';
-import { halamanMaster, MASTER } from './master.js?v=7';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=7';
-import { halamanPersetujuan } from './persetujuan.js?v=7';
-import { halamanPusat } from './pusat.js?v=7';
-import {halamanPengadaan} from './pengadaan-ui.js?v=7';
-import * as P from './pengguna.js?v=7';
-import { halamanPengguna } from './pengguna.js?v=7';
+import { halamanDashboard } from './dashboard.js?v=8';
+import { halamanMasuk } from './masuk.js?v=8';
+import { halamanKeluar } from './keluar.js?v=8';
+import { halamanSppb } from './sppb.js?v=8';
+import { halamanLaporan } from './laporan.js?v=8';
+import { halamanMaster, MASTER } from './master.js?v=8';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=8';
+import { halamanPersetujuan } from './persetujuan.js?v=8';
+import { halamanPusat } from './pusat.js?v=8';
+import {halamanPengadaan} from './pengadaan-ui.js?v=8';
+import * as P from './pengguna.js?v=8';
+import { halamanPengguna } from './pengguna.js?v=8';
 
 const akar = document.getElementById('akar');
 
@@ -241,10 +241,11 @@ function bangunMenu() {
 
   const kelompok = [];
   for (const g of KELOMPOK) {
+    const visible=g.item.filter(k=>P.bolehHalaman(k));if(!visible.length)continue;
     kelompok.push(el('div.sisi-kelompok', { teks: g.judul }));
-    for (const k of g.item) if (P.bolehHalaman(k)) kelompok.push(tautan(k, HALAMAN[k].l));
+    for (const k of visible) kelompok.push(tautan(k, HALAMAN[k].l));
   }
-  kelompok.push(el('div.sisi-kelompok', { teks: 'Master data' }));
+  if(P.bolehHalaman('master'))kelompok.push(el('div.sisi-kelompok', { teks: 'Master data' }));
   for (const [t, def] of Object.entries(MASTER)) {
     if (P.bolehHalaman('master')) kelompok.push(el('a', { href: `#/master/${t}`, teks: def.judul }));
   }
@@ -254,7 +255,7 @@ function bangunMenu() {
   taruh(elSisi,
     el('div.sisi-merek', {}, [
       el('strong', { teks: D.state.meta?.label || 'Gudang Material' }),
-      el('span', { teks: 'Material masuk · keluar · SPPB' }),
+      el('span', { teks: P.mandor()?'Permintaan material':'Material masuk · keluar · SPPB' }),
     ]),
     el('div.sisi-menu', {}, kelompok),
     el('div.sisi-kaki', {}, [
@@ -362,7 +363,7 @@ async function gambar() {
   }
   const h = HALAMAN[nama] || HALAMAN.dashboard;
   if (!HALAMAN[nama]) history.replaceState(null, '', '#/dashboard');
-  gambarKepala(h.l, h.sub);
+  gambarKepala(h.l,P.mandor()&&h===HALAMAN.dashboard?'Permintaan Anda dan informasi stok material':h.sub);
   kosongkan(elIsi);
   try {
     await h.buat(elIsi);

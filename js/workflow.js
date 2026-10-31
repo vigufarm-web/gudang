@@ -1,7 +1,10 @@
-import * as D from './data.js?v=7';
-import * as P from './pengguna.js?v=7';
-import {norm,unit,samaUnit} from './pengadaan-model.js?v=7';
+import {bagiProporsi} from './blok-model.js?v=8';
+export {bagiProporsi};
+import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
+import {norm,unit,samaUnit} from './pengadaan-model.js?v=8';
 export const dokumen=()=>Object.values(D.web().permintaanMaterial||{});
+export const permintaanTerlihat=()=>dokumen().filter(o=>P.mandor()?o.pemohon.id===P.siapa()?.id&&P.cakupan(o.divisi):P.admin()||P.punya('gudang')||P.cakupan(o.divisi));
 export const opname=()=>Object.values(D.web().stokOpname||{});
 const copy=v=>JSON.parse(JSON.stringify(v));
 const uid=()=>crypto.randomUUID();
@@ -9,15 +12,6 @@ const waktu=()=>new Date().toISOString();
 const actor=()=>{const p=P.siapa();if(!p)throw Error('Masuk pengguna terlebih dahulu.');return {id:p.id,nama:p.nama};};
 const requireThat=(ok,msg)=>{if(!ok)throw Error(msg);};
 export const presisi=s=>unit(s)==='buah'||['unit','batang','lembar'].includes(unit(s))?0:2;
-export function bagiProporsi(total,bobot,desimal=2){
- const scale=10**desimal,t=Math.round(Number(total)*scale);
- requireThat(Number.isFinite(Number(total))&&total>0&&Math.abs(total*scale-t)<1e-6,'Jumlah tidak sesuai presisi satuan.');
- requireThat(bobot.length&&bobot.every(x=>Number.isFinite(Number(x))&&x>0),'Luas semua blok harus terisi dan lebih dari nol. Gunakan mode manual bila belum lengkap.');
- const sum=bobot.reduce((a,b)=>a+Number(b),0),raw=bobot.map(x=>t*x/sum),parts=raw.map(Math.floor);
- const order=raw.map((x,i)=>({i,sisa:x-parts[i]})).sort((a,b)=>b.sisa-a.sisa||a.i-b.i);
- const sisa=t-parts.reduce((a,b)=>a+b,0);for(let i=0;i<sisa;i++)parts[order[i].i]++;
- return parts.map(x=>x/scale);
-}
 export function susunItem(divisi,raw){
  requireThat(raw.umum||['luas','manual'].includes(raw.mode),'Pilih mode pembagian.');
  const master=D.masterDenganNama('master_material',raw.material);

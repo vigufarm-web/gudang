@@ -1,13 +1,13 @@
-import {formSppbBaru} from './sppb.js?v=7';
-import * as D from './data.js?v=7';
-import * as P from './pengguna.js?v=7';
-import * as W from './workflow.js?v=7';
-import {el,kosongkan,isian,panel,tabel,angka,tanya,mintaTeks,pesan,taruh,hariIni} from './ui.js?v=7';
-import {inputTanggal,inputAngka} from './form-util.js?v=7';
-import {editorPembagian} from './blok-ui.js?v=7';
-import {bisaEdit,simpanSekarang} from './main.js?v=7';
-import {adalahBbm} from './bbm-model.js?v=7';
-import {norm,samaUnit} from './pengadaan-model.js?v=7';
+import {formSppbBaru} from './sppb.js?v=8';
+import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
+import * as W from './workflow.js?v=8';
+import {el,kosongkan,isian,panel,tabel,angka,tanya,mintaTeks,pesan,taruh,hariIni} from './ui.js?v=8';
+import {inputTanggal,inputAngka} from './form-util.js?v=8';
+import {editorPembagian} from './blok-ui.js?v=8';
+import {bisaEdit,simpanSekarang} from './main.js?v=8';
+import {adalahBbm} from './bbm-model.js?v=8';
+import {norm,samaUnit} from './pengadaan-model.js?v=8';
 const button=(teks,fn)=>{const b=el('button',{type:'button',teks,onclick:async()=>{if(b.disabled)return;b.disabled=true;try{await fn();}finally{b.disabled=false;}}});return b;};
 async function simpan(fn,repaint){fn();await simpanSekarang('Web: permintaan / stok opname');repaint();}
 const jejak=o=>el('details',{},[el('summary',{teks:'Jejak tindakan'}),...(o.jejak||[]).map(j=>el('p.bantuan',{teks:`${new Date(j.waktu).toLocaleString('id-ID')} · ${j.nama} · ${j.aksi}${j.alasan?' · '+j.alasan:''}`}))]);
@@ -53,7 +53,7 @@ function detailPermintaan(o,repaint){
 }
 export async function halamanPermintaan(wadah){
  const search=el('input',{type:'search',placeholder:'Cari nomor, mandor, material atau blok…'}),list=el('div');
- const gambar=()=>{kosongkan(list);const q=norm(search.value),docs=W.dokumen().filter(o=>P.admin()||P.punya('gudang')||P.cakupan(o.divisi)).filter(o=>!q||norm(JSON.stringify(o)).includes(q)).sort((a,b)=>b.dibuat.localeCompare(a.dibuat));list.append(tabel([{l:'Nomor',k:'nomor'},{l:'Tanggal',k:'tanggal'},{l:'Divisi',k:'divisi'},{l:'Mandor',nilai:o=>o.pemohon.nama},{l:'Status',nilai:o=>o.status==='Full Acc'?(W.rincian(o).every(r=>r.sisa<1e-7)?'Selesai':W.rincian(o).some(r=>r.diserahkan>0)?'Diserahkan sebagian':W.rincian(o).some(r=>r.sisa>(D.laporanStok().find(s=>norm(s.material)===norm(r.material)&&samaUnit(s.satuan,r.satuan))?.stok||0))?'Full Acc · menunggu stok':'Full Acc · siap diserahkan'):o.status},{l:'Material / blok',nilai:o=>o.items.map(it=>it.material+' ('+it.alokasi.map(a=>a.blok||'Umum').join(', ')+')').join('; ')}],docs,{kosong:'Belum ada permintaan.',saatKlik:o=>detailPermintaan(o,gambar)}));};search.addEventListener('input',gambar);
+ const gambar=()=>{kosongkan(list);const q=norm(search.value),docs=W.permintaanTerlihat().filter(o=>!q||norm(JSON.stringify(o)).includes(q)).sort((a,b)=>b.dibuat.localeCompare(a.dibuat));list.append(tabel([{l:'Nomor',k:'nomor'},{l:'Tanggal',k:'tanggal'},{l:'Divisi',k:'divisi'},{l:'Mandor',nilai:o=>o.pemohon.nama},{l:'Status',nilai:o=>o.status==='Full Acc'?(W.rincian(o).every(r=>r.sisa<1e-7)?'Selesai':W.rincian(o).some(r=>r.diserahkan>0)?'Diserahkan sebagian':W.rincian(o).some(r=>r.sisa>(D.laporanStok().find(s=>norm(s.material)===norm(r.material)&&samaUnit(s.satuan,r.satuan))?.stok||0))?'Full Acc · menunggu stok':'Full Acc · siap diserahkan'):o.status},{l:'Material / blok',nilai:o=>o.items.map(it=>it.material+' ('+it.alokasi.map(a=>a.blok||'Umum').join(', ')+')').join('; ')}],docs,{kosong:'Belum ada permintaan.',saatKlik:o=>detailPermintaan(o,gambar)}));};search.addEventListener('input',gambar);
  taruh(wadah,el('p',{teks:'Mandor mengajukan → Kepala Divisi → KTU → Gudang menyerahkan. Acc belum mengurangi stok; penyerahan tercatat sekali di Material Keluar / BBM Keluar.'}),bisaEdit()&&P.punya('minta')?button('+ Permintaan mandor',()=>formPermintaan(gambar)):null,search,list);gambar();
 }
 function mulaiOpname(repaint){

@@ -7,12 +7,14 @@ export const HAK = [
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
   ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'],
 ];
-export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || p.hak?.[hak] === true);
+export const mandor=p=>!!p&&!p.admin&&(p.peran==='mandor'||(p.hak?.minta===true&&!['input','revisi','kepala','ktu','gudang','order','opname'].some(k=>p.hak?.[k])));
+export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || ((!mandor(p)||hak==='minta')&&p.hak?.[hak] === true));
 export const cakupan = (p, divisi) => !!p && p.aktif !== false &&
   (p.admin === true || (Array.isArray(p.divisi) && p.divisi.some((d) => normal(d) === normal(divisi))));
 export function bolehHalaman(p, halaman) {
   if (!p || p.aktif === false) return false;
   if (p.admin) return true;
+  if(mandor(p))return ['dashboard','permintaan','sandi'].includes(halaman);
   if (['pengguna', 'sistem', 'riwayat', 'master'].includes(halaman)) return false;
   if (['masuk', 'keluar', 'bbm-masuk', 'bbm-keluar', 'sppb'].includes(halaman)) return punya(p, 'input') || punya(p, 'revisi');
   if(halaman==='permintaan')return punya(p,'minta')||punya(p,'kepala')||punya(p,'ktu')||punya(p,'gudang');
