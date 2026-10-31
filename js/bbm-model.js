@@ -20,9 +20,10 @@ export function susunPembagianBbm({total,mode='kosong',alokasi=[],divisi},master
  if(!['manual','luas'].includes(mode)||!alokasi.length)throw Error('Pilih minimal satu blok/lokasi atau gunakan Tanpa blok / lokasi.');
  const seen=new Set();const rows=alokasi.map(a=>{
   const master=a.blok_id!=null?masterBlok.find(m=>String(m.id)===String(a.blok_id)):masterBlok.find(m=>norm(m.nama)===norm(String(a.blok||'').replace(/\s+/g,' ').trim()));
+  if(master?.gis_active===false)throw Error('Blok GIS nonaktif. Pilih blok pengganti.');
   if((a.blok_id!=null&&!master)||(master&&norm(master.divisi)!==norm(divisi)))throw Error('Blok harus berada pada divisi pemakai yang dipilih.');
   const blok=String(master?.nama??a.blok??'').replace(/\s+/g,' ').trim();if(!blok||seen.has(norm(blok)))throw Error('Nama blok/lokasi harus diisi dan tidak boleh berulang.');seen.add(norm(blok));
-  return {blok,blok_id:master?.id??null,luas_acuan_ha:master?Number(master.luas_ha)||0:null,qty:Number(a.qty)};
+  return {blok,blok_id:master?.id??null,gis_block_id:master?.gis_block_id||null,gis_version:master?.gis_version??null,luas_acuan_ha:master?Number(master.luas_ha)||0:null,qty:Number(a.qty)};
  });
  if(mode==='luas'){
   if(rows.some(r=>r.blok_id===null))throw Error('Proporsi luas hanya untuk Master Blok. Lokasi lain memakai pembagian manual.');
