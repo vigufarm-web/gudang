@@ -1,10 +1,10 @@
-import * as D from './data.js?v=6';
-import * as P from './pengguna.js?v=6';
-import {samaUnit} from './pengadaan-model.js?v=6';
-import {bukaAmplop} from './kunci.js?v=6';
-import {el,taruh,kosongkan,isian,panel,pesan,angka} from './ui.js?v=6';
-import {bisaEdit} from './main.js?v=6';
-import {JENIS_BBM,unitDariPayroll,labelUnit,adalahBbm} from './bbm-model.js?v=6';
+import * as D from './data.js?v=7';
+import * as P from './pengguna.js?v=7';
+import {samaUnit} from './pengadaan-model.js?v=7';
+import {bukaAmplop} from './kunci.js?v=7';
+import {el,taruh,kosongkan,isian,panel,pesan,angka} from './ui.js?v=7';
+import {bisaEdit} from './main.js?v=7';
+import {JENIS_BBM,unitDariPayroll,labelUnit,adalahBbm} from './bbm-model.js?v=7';
 const PAYROLL='https://vigufarm-web.github.io/payrol/';
 export function pilihanUnitBbm(lama){
  const refs=D.web().unitPayroll?.daftar||[];

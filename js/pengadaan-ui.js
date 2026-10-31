@@ -1,8 +1,8 @@
-import * as D from './data.js?v=6';
-import * as P from './pengguna.js?v=6';
-import * as B from './pengadaan-model.js?v=6';
-import {el,kosongkan,taruh,isian,tabel,panel,pesan,mintaTeks,hariIni,angka,tanggal} from './ui.js?v=6';
-import {bisaEdit,simpanSekarang} from './main.js?v=6';
+import * as D from './data.js?v=7';
+import * as P from './pengguna.js?v=7';
+import * as B from './pengadaan-model.js?v=7';
+import {el,kosongkan,taruh,isian,tabel,panel,pesan,mintaTeks,hariIni,angka,tanggal} from './ui.js?v=7';
+import {bisaEdit,simpanSekarang} from './main.js?v=7';
 const jml=v=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:3}).format(Number(v)||0);
 const positif=v=>Number(v)>0?Number(v):null;
 const f=(nama,nilai='',type='text')=>el('input',{type,nilai,...(type==='number'?{step:'any',min:0}:{})});

@@ -1,15 +1,16 @@
-import {jenisBbm} from './bbm-model.js?v=6';
+import * as W from './workflow.js?v=7';
+import {jenisBbm} from './bbm-model.js?v=7';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
 //
 // Satu file data = seluruh isi gudang.db aplikasi desktop, dikemas jadi satu
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=6';
-import * as gh from './github.js?v=6';
-import { unduhTeks } from './ui.js?v=6';
-import * as P from './pengguna.js?v=6';
-import * as B from './pengadaan-model.js?v=6';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=7';
+import * as gh from './github.js?v=7';
+import { unduhTeks } from './ui.js?v=7';
+import * as P from './pengguna.js?v=7';
+import * as B from './pengadaan-model.js?v=7';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';
@@ -56,6 +57,7 @@ export function tandaiBerubah() {
 }
 
 export function tambah(tabel, isi) {
+  if(tabel==='material_keluar'&&isi.permintaan_id)throw Error('Penyerahan permintaan wajib melalui detail permintaan.');
   if(tabel==='material_masuk'&&isi.order_id){const o=web().pesanan?.[isi.order_id],it=o&&cari('sppb_items',o.sppb_item_id);if(!it||statusAcc(it.sppb_id)!==STATUS_ACC.FULL)throw Error('SPPB order ini belum disetujui / sedang menunggu persetujuan ulang.');}
   if(tabel==='material_masuk'&&isi.order_id)isi=B.susunPenerimaan(state.data,isi);
   if(tabel==='material_masuk'&&!isi.order_id){isi={...isi,divisi:'Gudang'};validasiMasukBiasa(isi);}
@@ -71,6 +73,7 @@ export function tambah(tabel, isi) {
 
 export function ubah(tabel, id, tambalan) {
   const r = cari(tabel, id);
+  if(tabel==='material_keluar'&&r?.permintaan_id)throw Error('Transaksi penyerahan permintaan dikunci agar jatah per blok tetap akurat.');
   if (!r) throw new Error('Baris tidak ditemukan.');
   if(tabel==='sppb_items'&&daftarOrder().some(o=>Number(o.sppb_item_id)===Number(id))&&['material','satuan','sppb_id'].some(k=>tambalan[k]!==undefined&&String(tambalan[k])!==String(r[k])))throw Error('Material, satuan dan induk item yang sudah diorder tidak boleh diganti. Buat item baru.');
   if(tabel==='material_masuk'&&r.order_id) {
@@ -92,6 +95,7 @@ export function hapus(tabel, id) {
   const semua = baris(tabel);
   const i = semua.findIndex((r) => Number(r.id) === Number(id));
   if (i < 0) return false;
+  if(tabel==='material_keluar'&&semua[i].permintaan_id)throw Error('Penyerahan permintaan tidak boleh dihapus dari Material Keluar.');
   P.jagaTransaksi('hapus', tabel, semua[i], null);
   if(tabel==='sppb'&&B.semuaOrder(state.data).some(o=>baris('sppb_items').some(it=>Number(it.sppb_id)===Number(id)&&Number(o.sppb_item_id)===Number(it.id))))throw Error('SPPB sudah memiliki order. Tutup sisa order terlebih dahulu; riwayat SPPB tidak boleh dihapus.');
   if(tabel==='sppb_items'&&B.semuaOrder(state.data).some(o=>Number(o.sppb_item_id)===Number(id)))throw Error('Item sudah memiliki order dan tidak boleh dihapus.');
@@ -118,6 +122,23 @@ export function hapus(tabel, id) {
   }
   tandaiBerubah();
   return true;
+}
+
+export function tambahBatchKeluar(rows,dariPermintaan=false){
+  if(!Array.isArray(rows)||!rows.length)throw Error('Isi pembagian jumlah.');
+  const totals=new Map();
+  for(const r of rows){
+    if(r.id!==undefined)throw Error('ID transaksi dibuat otomatis.');
+    if(r.permintaan_id){
+      const o=web().permintaanMaterial?.[r.permintaan_id],it=o?.items.find(x=>x.id===r.permintaan_item_id),a=it?.alokasi.find(x=>x.id===r.alokasi_id);
+      if(!dariPermintaan||!P.punya('gudang')||!P.punya('input')||o?.status!=='Full Acc'||!a||o.divisi!==r.divisi||it.material!==r.material||!B.samaUnit(it.satuan,r.satuan)||a.blok!==r.blok)throw Error('Referensi penyerahan tidak valid.');
+      const q=rows.filter(x=>x.alokasi_id===a.id).reduce((s,x)=>s+Number(x.qty),0)+W.jumlahSerah(o,it,a);if(q>a.disetujui+1e-7)throw Error('Penyerahan melebihi jatah per blok.');
+    }else{if(dariPermintaan)throw Error('Referensi permintaan wajib.');P.jagaTransaksi('tambah','material_keluar',null,r);}
+    if(!r.tanggal||!r.diambil_oleh?.trim())throw Error('Tanggal dan penerima wajib.');
+    validasiPengeluaran(r);const k=B.norm(r.material)+'|'+B.unit(r.satuan);totals.set(k,(totals.get(k)||0)+Number(r.qty));
+  }
+  for(const [k,qty] of totals){const s=laporanStok().find(r=>B.norm(r.material)+'|'+B.unit(r.satuan)===k);if(qty>(s?.stok||0)+1e-7)throw Error('Total pembagian melebihi stok Gudang.');}
+  const start=idBaru('material_keluar');const added=rows.map((r,i)=>({...r,id:start+i}));baris('material_keluar').push(...added);catatMutasi('Penyerahan banyak blok','material_keluar',rows[0].batch_id,{baris:added.length});tandaiBerubah();return added;
 }
 
 export function pengaturan() {
@@ -537,16 +558,17 @@ export function laporanStok(kategoriFilter = null) {
   const peta = new Map();   // kunci: material|satuan (huruf kecil)
   const ambil = (r) => {
     const k = `${kecil(r.material)}|${B.unit(r.satuan)}`;
-    if (!peta.has(k)) peta.set(k, { material: rapikan(r.material), satuan: rapikan(r.satuan), masuk: 0, keluar: 0 });
+    if (!peta.has(k)) peta.set(k, { material: rapikan(r.material), satuan: rapikan(r.satuan), masuk: 0, keluar: 0, penyesuaian:0 });
     return peta.get(k);
   };
   for (const r of baris('material_masuk')) ambil(r).masuk += B.qtyBersih(state.data,r);
   for (const r of baris('material_keluar')) ambil(r).keluar += Number(r.qty) || 0;
+  for(const r of W.adjustment(state.data))ambil(r).penyesuaian+=r.qty;
   const hasil = [];
   for (const v of peta.values()) {
     const kategori = kategoriMaterial(v.material);
     if (kategoriFilter && kecil(kategori) !== kecil(kategoriFilter)) continue;
-    hasil.push({ ...v, kategori, stok: dekatNol(v.masuk - v.keluar) });
+    hasil.push({ ...v, kategori, stok: dekatNol(v.masuk - v.keluar + v.penyesuaian) });
   }
   hasil.sort((a, b) => a.material.localeCompare(b.material, 'id'));
   return hasil;
@@ -700,7 +722,9 @@ export async function simpan(pesan) {
   // Alih-alih menyerah, perubahan LOKAL digabungkan ke data TERBARU lalu
   // dicoba simpan lagi — tidak ada input siapa pun yang hilang.
   for (let percobaan = 0; ; percobaan++) {
+    if(!P.siapa())throw Error('Sesi pengguna berubah. Masuk ulang sebelum menyimpan.');
     const basis=state.dasarJson?JSON.parse(state.dasarJson):{};
+    W.validasiSimpanWorkflow(basis);
     for(const o of daftarOrder()){
       const r=B.ringkasOrder(state.data,o),lama=basis.web?.pesanan?.[o.id];
       if(lama&&r.masuk.length&&['qty_order','satuan_order','satuan_sppb','satuan_stok','faktor_order','faktor_stok'].some(k=>o[k]!==lama[k]))throw Error('Ada penerimaan pada order ini. Konversi/jumlah asal tidak boleh ditimpa; muat ulang data.');
@@ -715,7 +739,7 @@ export async function simpan(pesan) {
       if(r&&r.total!=null&&r.diterima>r.total-r.batal+1e-7)throw Error('Penerimaan bersamaan melebihi order. Koreksi atau catat alasan pengecualian.');
     }
     // Recheck after merging: two devices must not spend the same fuel balance.
-    for(const r of baris('material_keluar'))if(jenisBbm(r.material)&&JSON.stringify(r)!==JSON.stringify(basis.tabel?.material_keluar?.find(x=>Number(x.id)===Number(r.id))))validasiPengeluaran(r,r.id);
+    for(const r of baris('material_keluar'))if(JSON.stringify(r)!==JSON.stringify(basis.tabel?.material_keluar?.find(x=>Number(x.id)===Number(r.id))))validasiPengeluaran(r,r.id);
     state.data.rev = (Number(state.data.rev) || 0) + 1;
     state.data.dibuat = new Date().toISOString().slice(0, 19);
     state.data.dari = namaPengisi() ? `Web — ${namaPengisi()}` : 'Web';
@@ -761,6 +785,7 @@ export async function simpan(pesan) {
  * - Baris yang DIHAPUS lokal dihapus juga dari remote.
  */
 export function gabungTiga(dasar, lokal, remote) {
+  W.jagaGabungWorkflow(dasar,lokal,remote);
   const hasil = JSON.parse(JSON.stringify(remote));
   hasil.tabel ||= {};
   const beda = (a, b) => JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
