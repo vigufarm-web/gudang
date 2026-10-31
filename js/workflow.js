@@ -19,8 +19,9 @@ export function susunItem(divisi,raw){
  const satuan=master.satuan_default;requireThat(satuan,'Lengkapi satuan stok pada Master Material.');
  const seen=new Set(),blocks=(raw.blok||[]).map(b=>{
   const m=D.baris('master_blok').find(x=>String(x.id)===String(b.id));
+  requireThat(m?.gis_active!==false,'Blok GIS nonaktif. Pilih blok pengganti.');
   requireThat(m&&norm(m.divisi)===norm(divisi)&&!seen.has(String(m.id)),'Blok harus unik dan berada pada divisi yang dipilih.');seen.add(String(m.id));
-  return {blok_id:m.id,blok:m.nama,luas_ha:Number(m.luas_ha)||0,qty:Number(b.qty)};
+  return {blok_id:m.id,blok:m.nama,gis_block_id:m.gis_block_id||null,gis_version:m.gis_version??null,luas_ha:Number(m.luas_ha)||0,qty:Number(b.qty)};
  });
  requireThat(raw.umum||blocks.length,'Pilih minimal satu blok atau keperluan umum divisi.');
  requireThat(!raw.umum||!blocks.length,'Keperluan umum tidak digabung dengan blok pada item yang sama.');
