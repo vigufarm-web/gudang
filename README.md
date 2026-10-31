@@ -277,3 +277,15 @@ Petugas dengan hak opname atau gudang membuat penghitungan material terpilih, me
 web.permintaanMaterial dan web.stokOpname bersifat dokumen utuh. Perubahan bersamaan pada dokumen yang sama ditolak saat gabung tiga arah agar persetujuan tidak bercampur dengan jumlah yang berbeda. Dokumen berbeda masih digabung; batas jatah, stok dan tumpang tindih opname diperiksa lagi sebelum simpan. Hak baru hanya ditambahkan sebagai pilihan/preset; tidak otomatis diberikan ke pengguna yang telah ada. Pembatasan tetap pada aplikasi seperti payroll, bukan otorisasi server. Ekspor/impor aplikasi desktop belum menghitung penyesuaian web; gunakan web sebagai sumber stok bila opname telah dipakai.
 
 Jika sisa permintaan Full Acc kekurangan stok, petugas Gudang dengan cakupan divisi dapat membuka Buat SPPB terkait. Form SPPB berisi usulan kekurangan dan nomor permintaan; petugas memeriksa order yang sudah ada dan merevisi jumlah sebelum mengajukan. SPPB tetap melalui alur persetujuan pembelian normal.
+
+
+## BBM keluar banyak blok / lokasi
+
+Form BBM Keluar baru menyediakan Tanpa blok/lokasi (bawaan), jumlah manual per blok/lokasi, dan proporsi luas Master Blok. Divisi tetap wajib. Lokasi bebas seperti bengkel dapat ditambahkan dalam mode manual tanpa membuat Master Blok baru. Total pembagian harus sama dengan total liter keluar; blok master harus sesuai divisi dan lokasi tidak boleh ganda. Kelompok disimpan atomik sebagai baris per blok/lokasi dengan batch yang sama, tanpa baris total tambahan. Unit ALB/kendaraan atau alsintan, penerima dan keperluan tetap dicatat pada semua baris. Koreksi riwayat tetap per baris/blok seperti aplikasi desktop; tidak mengubah pembagian baris lain.
+
+Form permintaan mandor menampilkan stok Gudang dan satuan saat memilih material, termasuk saldo nol dan hasil opname. Jumlah yang melebihi stok diberi penanda kekurangan; pengajuan tidak diblokir karena masih dapat ditindaklanjuti pembelian. Angka berdasarkan data yang terakhir dimuat, bukan reservasi stok.
+
+
+## Tampilan khusus Mandor
+
+Mandor hanya membuka Dashboard, Permintaan Mandor dan Ganti password/PIN sendiri. Rute langsung ke halaman lainnya ditolak oleh pemeriksaan hak aplikasi. Dashboard mandor berisi ringkasan dan daftar permintaan sendiri serta pencarian stok material untuk pengajuan; tidak memuat transaksi umum, pemakaian divisi lain, SPPB, BBM atau stok opname. Daftar permintaan mandor hanya miliknya dan dalam cakupan divisinya. Kepala Divisi/KTU tetap melihat permintaan menurut cakupan divisi, petugas Gudang menurut hak Gudang. Akun peran Mandor tidak mendapat hak transaksi langsung/persetujuan meski ada flag operasional yang keliru; ganti peran jika petugas memang ditugaskan pada fungsi lain. Batas otorisasi tetap pada aplikasi, sesuai arsitektur payroll yang disepakati.
