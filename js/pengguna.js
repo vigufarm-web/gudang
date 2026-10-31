@@ -1,8 +1,8 @@
-import * as D from './data.js?v=6';
-import * as H from './hak.js?v=6';
-import * as gh from './github.js?v=6';
-import {bukaAmplop, kunciAmplop} from './kunci.js?v=6';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=6';
+import * as D from './data.js?v=7';
+import * as H from './hak.js?v=7';
+import * as gh from './github.js?v=7';
+import {bukaAmplop, kunciAmplop} from './kunci.js?v=7';
+import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=7';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }
@@ -166,14 +166,14 @@ function formPengguna(wadah,p,kembali) {
   const nama = el('input',{type:'text',nilai:p?.nama || '',required:true});
   const username = el('input',{type:'text',nilai:p?.username || '',required:true,autocomplete:'off',pattern:'[A-Za-z0-9_.-]{2,40}'});
   const password = el('input',{type:'password',autocomplete:'new-password',minlength:6,placeholder:p ? 'Kosongkan jika tetap' : 'Minimal 6 karakter',required:!p});
-  const peran = el('select',{},[['kepala','Kepala Divisi'],['gudang','Petugas Gudang'],['pusat','Kantor Pusat'],['lihat','Lihat saja'],['admin','Admin / KTU']].map(([v,l]) => el('option',{value:v,teks:l})));
+  const peran = el('select',{},[['mandor','Mandor'],['kepala','Kepala Divisi'],['gudang','Petugas Gudang'],['pusat','Kantor Pusat'],['lihat','Lihat saja'],['admin','Admin / KTU']].map(([v,l]) => el('option',{value:v,teks:l})));
   peran.value = p?.admin ? 'admin' : p?.peran || 'kepala';
   const aktif = el('input',{type:'checkbox',checked:p?.aktif !== false});
   const divisi = [...new Set([...D.baris('master_divisi').map((r) => r.nama), ...(p?.divisi || [])])].filter(Boolean).sort();
   const divInputs = divisi.map((d) => [d,el('input',{type:'checkbox',checked:p?.divisi?.some((v) => H.normal(v) === H.normal(d))})]);
   const hakInputs = H.HAK.map(([k,l]) => [k,l,el('input',{type:'checkbox',checked:p?.hak?.[k]})]);
   const terapkanPeran = () => {
-    const preset = {kepala:['kepala'],gudang:['input','revisi','gudang'],pusat:['order'],lihat:[],admin:H.HAK.map(([k])=>k)}[peran.value];
+    const preset = {mandor:['minta'],kepala:['kepala'],gudang:['input','revisi','gudang','opname'],pusat:['order'],lihat:[],admin:H.HAK.map(([k])=>k)}[peran.value];
     for (const [k,,inp] of hakInputs) inp.checked = preset.includes(k);
   };
   if (!p) terapkanPeran();

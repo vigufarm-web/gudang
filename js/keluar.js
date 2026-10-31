@@ -1,18 +1,20 @@
-import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=6';
-import {pilihanUnitBbm} from './bbm.js?v=6';
+import {formKeluarBanyakBlok} from './workflow-ui.js?v=7';
+import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=7';
+import {pilihanUnitBbm} from './bbm.js?v=7';
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js?v=6';
-import * as P from './pengguna.js?v=6';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=6';
-import { bisaEdit, spandukLokal } from './main.js?v=6';
+import * as D from './data.js?v=7';
+import * as P from './pengguna.js?v=7';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=7';
+import { bisaEdit, spandukLokal } from './main.js?v=7';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=6';
+} from './form-util.js?v=7';
 
 function formKeluar(barisLama, saatSelesai, bbm=false) {
+  if(barisLama?.permintaan_id){pesan('Penyerahan terhubung ke '+barisLama.no_permintaan+'. Buka Permintaan Mandor untuk melihat riwayatnya.','awas');return;}
   if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;
   const tempatGalat = el('div');
   const kTanggal = inputTanggal(barisLama?.tanggal);
@@ -138,6 +140,7 @@ export async function halamanKeluar(wadah, bbm=false) {
       tabel([
         { l: 'Tanggal', k: 'tanggal', jenis: 'tanggal' },
         { l: 'Material', k: 'material' },
+        {l:'Permintaan',k:'no_permintaan'},
         { l: 'Qty', k: 'qty', jenis: 'angka', pecahan: 2, total: true },
         { l: 'Satuan', k: 'satuan' },
         { l: 'Blok', k: 'blok' },
@@ -163,6 +166,7 @@ export async function halamanKeluar(wadah, bbm=false) {
           type: 'button', teks: bbm?'+ Catat BBM keluar':'+ Catat material keluar',
           onclick: () => formKeluar(null, gambarTabel,bbm),
         }) : null,
+        !bbm&&bisaEdit()&&P.bolehInput()?el('button',{teks:'+ Banyak blok',onclick:()=>formKeluarBanyakBlok(gambarTabel)}):null,
         tempatRingkas,
       ]),
       filter.elemen,

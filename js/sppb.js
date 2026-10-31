@@ -2,13 +2,13 @@
 // monitoring realisasi per item (dihitung otomatis dari Material Masuk yang
 // di-link), dan cetak surat permintaan ber-kop untuk persetujuan Direktur.
 
-import * as D from './data.js?v=6';
-import * as P from './pengguna.js?v=6';
-import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=6';
-import { bisaEdit, spandukLokal } from './main.js?v=6';
-import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=6';
-import { daftarJejak } from './persetujuan.js?v=6';
-import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=6';
+import * as D from './data.js?v=7';
+import * as P from './pengguna.js?v=7';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, waktu, namaBulan, kesalahan, hariIni } from './ui.js?v=7';
+import { bisaEdit, spandukLokal } from './main.js?v=7';
+import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=7';
+import { daftarJejak } from './persetujuan.js?v=7';
+import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=7';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -69,15 +69,15 @@ function barisItem(item = {}) {
   };
 }
 
-function formSppbBaru(saatSelesai) {
+export function formSppbBaru(saatSelesai,referensi=null) {
   const tempatGalat = el('div');
   // nomor lanjut otomatis dari yang terakhir (2696 → 2697); tetap bisa diubah
   const kNo = el('input', { type: 'text', nilai: D.nomorSppbBerikut(), placeholder: 'mis. 2697' });
   const kTanggal = el('input', { type: 'date', nilai: hariIni() });
-  const kDivisi = inputMaster('master_divisi', '');
-  const kKet = el('textarea', { rows: 2 });
+  const kDivisi = inputMaster('master_divisi', referensi?.divisi||'');
+  const kKet = el('textarea', { rows: 2 },[referensi?'Tindak lanjut '+referensi.nomor+'; periksa kebutuhan dan order yang sudah ada sebelum mengajukan.':'']);
 
-  const daftarItem = [barisItem(), barisItem()];
+  const daftarItem = referensi?.items?.length?referensi.items.map(barisItem):[barisItem(), barisItem()];
   const tempatItem = el('div');
   const gambarItem = () => {
     kosongkan(tempatItem);
@@ -108,7 +108,7 @@ function formSppbBaru(saatSelesai) {
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
     if (divisi) D.pastikanMaster('master_divisi', divisi);
     for (const it of items) D.pastikanMaster('master_material',it.material,{satuan_default:it.satuan});
-    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value) });
+    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value),...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
     for (const it of items) {
       D.pastikanMaster('master_material', it.material, { satuan_default: it.satuan });
       D.tambah('sppb_items', { sppb_id: s.id, ...it });

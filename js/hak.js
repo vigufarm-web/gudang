@@ -1,6 +1,7 @@
 // Pembatasan operasional di browser, sama seperti payroll. Bukan otorisasi server.
 export const normal = (v) => String(v || '').trim().toLowerCase();
 export const HAK = [
+  ['minta','Buat permintaan material mandor'],['opname','Catat stok opname Gudang'],
   ['input', 'Input transaksi baru'], ['revisi', 'Revisi dan hapus transaksi'],
   ['kepala', 'Persetujuan kepala divisi'], ['ktu', 'Persetujuan KTU'],
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
@@ -14,6 +15,8 @@ export function bolehHalaman(p, halaman) {
   if (p.admin) return true;
   if (['pengguna', 'sistem', 'riwayat', 'master'].includes(halaman)) return false;
   if (['masuk', 'keluar', 'bbm-masuk', 'bbm-keluar', 'sppb'].includes(halaman)) return punya(p, 'input') || punya(p, 'revisi');
+  if(halaman==='permintaan')return punya(p,'minta')||punya(p,'kepala')||punya(p,'ktu')||punya(p,'gudang');
+  if(halaman==='opname')return punya(p,'opname')||punya(p,'gudang')||punya(p,'ktu');
   if (halaman === 'persetujuan') return punya(p, 'kepala') || punya(p, 'ktu') || punya(p, 'batal');
   return true;
 }

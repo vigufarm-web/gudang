@@ -2,10 +2,10 @@
 // Sama seperti aplikasi desktop: menghapus master tidak menghapus transaksi
 // lama yang memakai nama itu — namanya saja tidak muncul lagi di pilihan baru.
 
-import * as D from './data.js?v=6';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, kesalahan } from './ui.js?v=6';
-import { bisaEdit, spandukLokal } from './main.js?v=6';
-import { miripMaster } from './form-util.js?v=6';
+import * as D from './data.js?v=7';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, kesalahan } from './ui.js?v=7';
+import { bisaEdit, spandukLokal } from './main.js?v=7';
+import { miripMaster } from './form-util.js?v=7';
 
 const rapikan = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const kecil = (s) => rapikan(s).toLowerCase();

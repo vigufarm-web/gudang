@@ -1,27 +1,30 @@
-import {halamanBbm} from './bbm.js?v=6';
+import {halamanPermintaan,halamanOpname} from './workflow-ui.js?v=7';
+import {halamanBbm} from './bbm.js?v=7';
 // main.js — kerangka situs Data Gudang: layar kunci, menu, kepala halaman,
 // simpan otomatis. Isi tiap halaman ada di modulnya masing-masing.
 
-import * as D from './data.js?v=6';
-import * as gh from './github.js?v=6';
-import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=6';
+import * as D from './data.js?v=7';
+import * as gh from './github.js?v=7';
+import { el, kosongkan, taruh, pesan, tanya, isian, waktu, angka } from './ui.js?v=7';
 
-import { halamanDashboard } from './dashboard.js?v=6';
-import { halamanMasuk } from './masuk.js?v=6';
-import { halamanKeluar } from './keluar.js?v=6';
-import { halamanSppb } from './sppb.js?v=6';
-import { halamanLaporan } from './laporan.js?v=6';
-import { halamanMaster, MASTER } from './master.js?v=6';
-import { halamanSistem, halamanRiwayat } from './sistem.js?v=6';
-import { halamanPersetujuan } from './persetujuan.js?v=6';
-import { halamanPusat } from './pusat.js?v=6';
-import {halamanPengadaan} from './pengadaan-ui.js?v=6';
-import * as P from './pengguna.js?v=6';
-import { halamanPengguna } from './pengguna.js?v=6';
+import { halamanDashboard } from './dashboard.js?v=7';
+import { halamanMasuk } from './masuk.js?v=7';
+import { halamanKeluar } from './keluar.js?v=7';
+import { halamanSppb } from './sppb.js?v=7';
+import { halamanLaporan } from './laporan.js?v=7';
+import { halamanMaster, MASTER } from './master.js?v=7';
+import { halamanSistem, halamanRiwayat } from './sistem.js?v=7';
+import { halamanPersetujuan } from './persetujuan.js?v=7';
+import { halamanPusat } from './pusat.js?v=7';
+import {halamanPengadaan} from './pengadaan-ui.js?v=7';
+import * as P from './pengguna.js?v=7';
+import { halamanPengguna } from './pengguna.js?v=7';
 
 const akar = document.getElementById('akar');
 
 const HALAMAN = {
+  permintaan:{l:'Permintaan Mandor',sub:'Banyak blok · acc Kepala Divisi dan KTU · penyerahan Gudang',buat:halamanPermintaan},
+  opname:{l:'Stok Opname',sub:'Hitung fisik Gudang · selisih · persetujuan KTU',buat:halamanOpname},
   dashboard: { l: 'Dashboard', sub: 'Stok saat ini dan SPPB yang belum lengkap', buat: halamanDashboard },
   pusat: { l: 'Kantor Pusat / Order', sub: 'Order bertahap, satuan supplier dan konversi', buat:w=>halamanPengadaan(w,false) },
   ditunggu:{l:'Barang ditunggu',sub:'Order terbuka dan penerimaan bertahap ke Gudang',buat:w=>halamanPengadaan(w,true)},
@@ -41,7 +44,7 @@ const HALAMAN = {
 
 const KELOMPOK = [
   { judul: 'Pantauan', item: ['dashboard', 'pusat', 'ditunggu', 'laporan'] },
-  { judul: 'Input data', item: ['masuk', 'keluar', 'sppb'] },
+  { judul: 'Input data', item: ['permintaan','masuk', 'keluar', 'sppb','opname'] },
   { judul: 'BBM', item: ['bbm','bbm-masuk','bbm-keluar'] },
   { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
 ];
