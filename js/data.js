@@ -722,6 +722,7 @@ export async function simpan(pesan) {
   // Alih-alih menyerah, perubahan LOKAL digabungkan ke data TERBARU lalu
   // dicoba simpan lagi — tidak ada input siapa pun yang hilang.
   for (let percobaan = 0; ; percobaan++) {
+    if(!P.siapa())throw Error('Sesi pengguna berubah. Masuk ulang sebelum menyimpan.');
     const basis=state.dasarJson?JSON.parse(state.dasarJson):{};
     W.validasiSimpanWorkflow(basis);
     for(const o of daftarOrder()){

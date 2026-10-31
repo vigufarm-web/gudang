@@ -91,4 +91,13 @@ export function jagaGabungWorkflow(dasar,lokal,remote){
  for(const bagian of ['permintaanMaterial','stokOpname'])for(const [id,l] of Object.entries(lokal.web?.[bagian]||{})){const b=dasar.web?.[bagian]?.[id],r=remote.web?.[bagian]?.[id];if(JSON.stringify(l)!==JSON.stringify(b)&&JSON.stringify(r)!==JSON.stringify(b)&&JSON.stringify(l)!==JSON.stringify(r))throw Error('Dokumen permintaan/opname yang sama telah diubah perangkat lain. Simpan draf sebagai referensi lalu muat ulang sebelum mengulangi tindakan.');}
 }
 
-export function validasiSimpanWorkflow(basis){auditWorkflow();for(const o of opname())if(o.status==='Disetujui'&&JSON.stringify(o)!==JSON.stringify(basis.web?.stokOpname?.[o.id])){periksaBasis(o);for(const r of o.items){requireThat(r.fisik!==null&&Number.isFinite(r.fisik)&&r.fisik>=0,'Hasil fisik opname tidak valid.');const s=D.laporanStok().find(x=>norm(x.material)===norm(r.material)&&samaUnit(x.satuan,r.satuan));requireThat(s&&s.stok>=-1e-7,'Penyesuaian bersamaan membuat stok negatif. Muat ulang dan hitung kembali.');}}}
+export function validasiSimpanWorkflow(basis){
+ auditWorkflow();
+ for(const o of opname()){
+  const lama=basis.web?.stokOpname?.[o.id];if(JSON.stringify(o)===JSON.stringify(lama))continue;
+  if(o.status!=='Disetujui'&&lama?.status!=='Disetujui')continue;
+  if(o.status==='Disetujui')periksaBasis(o);
+  else requireThat(!opname().some(x=>x.id!==o.id&&x.status==='Disetujui'&&x.items.some(r=>r.basis?.['opname:'+o.id]!==undefined)),'Ada opname baru yang bergantung pada penyesuaian ini. Gunakan opname baru.');
+  for(const r of o.items){requireThat(r.fisik!==null&&Number.isFinite(r.fisik)&&r.fisik>=0,'Hasil fisik opname tidak valid.');const s=D.laporanStok().find(x=>norm(x.material)===norm(r.material)&&samaUnit(x.satuan,r.satuan));requireThat(s&&s.stok>=-1e-7,'Penyesuaian bersamaan membuat stok negatif. Muat ulang dan hitung kembali.');}
+ }
+}
