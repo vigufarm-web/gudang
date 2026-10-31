@@ -252,7 +252,7 @@ export async function halamanSistem(wadah) {
   );
 
   taruh(wadah, spandukLokal(), bagianNama, bagianEdit, await bagianAuto, bagianPejabat, bagianProfil, bagianTautan, bagianStatus);
-  mountGISPanel(wadah,{D,app:'gudang',isAdmin:GP.admin,canEdit:bisaEdit,markChanged:D.tandaiBerubah});
+  mountGISPanel(wadah,{D,app:'gudang',isAdmin:GP.admin,canEdit:bisaEdit,markChanged:D.tandaiBerubah,save:D.simpanGIS});
 }
 
 // =====================================================================

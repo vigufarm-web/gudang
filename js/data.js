@@ -1,4 +1,4 @@
-import {assertGISMerge,captureGISSnapshot,assertGISMasterEdit,assertGISBlockActive,assertGISMasterStructure} from './gis-model.js?v=gis-pages-3';
+import {rebaseGISOnly,gisOnlyChanges,assertGISMerge,captureGISSnapshot,assertGISMasterEdit,assertGISBlockActive,assertGISMasterStructure} from './gis-model.js?v=gis-pages-3';
 import * as W from './workflow.js?v=8';
 import {jenisBbm} from './bbm-model.js?v=8';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
@@ -685,7 +685,7 @@ export async function muat(password) {
   state.belumDisimpan = false;
   state.dasarJson = JSON.stringify(data);
   gh.setTokenBersama(data.web?.token || '');
-  import('./gis-panel.js?v=gis-pages-3').then(m=>m.startGISAuto({D:{state},app:'gudang',isAdmin:P.admin,canEdit:()=>!!gh.ambilToken(),markChanged:tandaiBerubah})).catch(()=>{});
+  import('./gis-panel.js?v=gis-pages-3').then(m=>m.startGISAuto({D:{state},app:'gudang',isAdmin:P.admin,canEdit:()=>!!gh.ambilToken(),markChanged:tandaiBerubah,save:simpanGIS})).catch(()=>{});
   return data;
 }
 
@@ -721,7 +721,7 @@ function susunMeta() {
 /** Mode lokal: halaman dibuka tanpa repo GitHub (ujicoba di komputer). */
 export const modeLokal = () => !gh.lokasiRepo();
 
-export async function simpan(pesan) {
+export async function simpan(pesan,{gisOnly=false}={}) {
   if (!P.siapa()) throw new Error('Masuk sebagai pengguna dulu.');
   if (!state.data) throw new Error('Belum ada data yang dimuat.');
   if (!state.password) throw new Error('Password data belum dimasukkan.');
@@ -778,7 +778,7 @@ export async function simpan(pesan) {
       if (!isi) throw e;
       const terbaru = await bukaAmplop(isi, state.password);
       const dasar = state.dasarJson ? JSON.parse(state.dasarJson) : terbaru;
-      state.data = gabungTiga(dasar, state.data, terbaru);
+      state.data = gisOnly&&gisOnlyChanges(dasar,state.data,'gudang')?rebaseGISOnly(dasar,state.data,terbaru,'gudang'):gabungTiga(dasar, state.data, terbaru);
       state.sha = sha;
       state.dasarJson = JSON.stringify(terbaru);
       state.gabungTerakhir++;
@@ -963,3 +963,5 @@ export async function pulihkanVersiGitHub(ref) {
   tandaiBerubah();
   return data;
 }
+
+export async function simpanGIS(){if(state.gisSaving)return;state.gisSaving=true;try{return await simpan('Web: sinkron otomatis blok GIS',{gisOnly:true});}finally{state.gisSaving=false;}}
