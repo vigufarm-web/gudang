@@ -1,8 +1,8 @@
-import * as D from './data.js?v=7';
-import * as H from './hak.js?v=7';
-import * as gh from './github.js?v=7';
-import {bukaAmplop, kunciAmplop} from './kunci.js?v=7';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=7';
+import * as D from './data.js?v=8';
+import * as H from './hak.js?v=8';
+import * as gh from './github.js?v=8';
+import {bukaAmplop, kunciAmplop} from './kunci.js?v=8';
+import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=8';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }
@@ -82,6 +82,7 @@ export async function halamanSandi(wadah) {
   kosongkan(wadah).append(el('div.lembar',{},[el('div.lembar-isi',{},[form])]));
 }
 export const admin = () => siapa()?.admin === true;
+export const mandor = () => H.mandor(siapa());
 export const punya = (hak) => H.punya(siapa(), hak);
 export const cakupan = (divisi) => H.cakupan(siapa(), divisi);
 export const bolehHalaman = (halaman) => H.bolehHalaman(siapa(), halaman);

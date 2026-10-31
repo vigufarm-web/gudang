@@ -4,12 +4,12 @@
 // di-link ke item SPPB) sisanya berkurang otomatis. Tiap item ketahuan:
 // Belum Diorder → Diorder → Sampai Sebagian → Sampai.
 
-import * as D from './data.js?v=7';
-import * as P from './pengguna.js?v=7';
-import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=7';
-import { bisaEdit, spandukLokal } from './main.js?v=7';
-import { kecil } from './form-util.js?v=7';
-import { bukaDetailSppb } from './sppb.js?v=7';
+import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
+import { el, kosongkan, taruh, pesan, tabel, angka, tanggal, waktu } from './ui.js?v=8';
+import { bisaEdit, spandukLokal } from './main.js?v=8';
+import { kecil } from './form-util.js?v=8';
+import { bukaDetailSppb } from './sppb.js?v=8';
 
 const chipOrder = (st) => el('span.chip' + (
   st === 'Sampai' || st === 'Sampai Semua' ? '.chip-ok'

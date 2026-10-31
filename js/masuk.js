@@ -1,15 +1,15 @@
-import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=7';
+import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=8';
 // masuk.js — Material Masuk: form input + tabel, dengan link opsional ke item SPPB.
 
-import * as D from './data.js?v=7';
-import * as P from './pengguna.js?v=7';
-import {formTerimaOrder,formRetur} from './pengadaan-ui.js?v=7';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=7';
-import { bisaEdit, spandukLokal } from './main.js?v=7';
+import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
+import {formTerimaOrder,formRetur} from './pengadaan-ui.js?v=8';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
+import { bisaEdit, spandukLokal } from './main.js?v=8';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=7';
+} from './form-util.js?v=8';
 
 function formMasuk(barisLama, saatSelesai, bbm=false) {
   if (barisLama && !P.bolehUbah('material_masuk',barisLama)) return;

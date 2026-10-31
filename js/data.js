@@ -1,16 +1,16 @@
-import * as W from './workflow.js?v=7';
-import {jenisBbm} from './bbm-model.js?v=7';
+import * as W from './workflow.js?v=8';
+import {jenisBbm} from './bbm-model.js?v=8';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
 //
 // Satu file data = seluruh isi gudang.db aplikasi desktop, dikemas jadi satu
 // amplop terenkripsi di data/gudang.json. Nomor `rev` dan `sha` menjaga agar
 // perubahan orang lain tidak tertimpa.
 
-import { bukaAmplop, kunciAmplop } from './kunci.js?v=7';
-import * as gh from './github.js?v=7';
-import { unduhTeks } from './ui.js?v=7';
-import * as P from './pengguna.js?v=7';
-import * as B from './pengadaan-model.js?v=7';
+import { bukaAmplop, kunciAmplop } from './kunci.js?v=8';
+import * as gh from './github.js?v=8';
+import { unduhTeks } from './ui.js?v=8';
+import * as P from './pengguna.js?v=8';
+import * as B from './pengadaan-model.js?v=8';
 
 const KUNCI_NAMA = 'app.nama';
 export const PATH = 'data/gudang.json';

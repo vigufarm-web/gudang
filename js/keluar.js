@@ -1,17 +1,18 @@
-import {formKeluarBanyakBlok} from './workflow-ui.js?v=7';
-import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=7';
-import {pilihanUnitBbm} from './bbm.js?v=7';
+import {editorBlokBbm} from './bbm-blok-ui.js?v=8';
+import {formKeluarBanyakBlok} from './workflow-ui.js?v=8';
+import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=8';
+import {pilihanUnitBbm} from './bbm.js?v=8';
 // keluar.js — Material Keluar: form input + tabel. "Diambil oleh" wajib diisi,
 // sama seperti aplikasi desktop.
 
-import * as D from './data.js?v=7';
-import * as P from './pengguna.js?v=7';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=7';
-import { bisaEdit, spandukLokal } from './main.js?v=7';
+import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
+import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
+import { bisaEdit, spandukLokal } from './main.js?v=8';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
-} from './form-util.js?v=7';
+} from './form-util.js?v=8';
 
 function formKeluar(barisLama, saatSelesai, bbm=false) {
   if(barisLama?.permintaan_id){pesan('Penyerahan terhubung ke '+barisLama.no_permintaan+'. Buka Permintaan Mandor untuk melihat riwayatnya.','awas');return;}
@@ -30,6 +31,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false) {
   const kQty = inputAngka(barisLama?.qty);
   const kBlok = inputMaster('master_blok', barisLama?.blok || '');
   const kDivisi = inputMaster('master_divisi', barisLama?.divisi || '');
+  const blokBbm=bbm&&!barisLama?editorBlokBbm(kDivisi,kQty):null;
   // saran nama pengambil dari riwayat, supaya ejaannya konsisten
   const idOleh = 'dlo' + Math.random().toString(36).slice(2, 9);
   const riwayatOleh = [...new Set(D.baris('material_keluar').map((r) => rapikan(r.diambil_oleh)).filter(Boolean))]
@@ -63,7 +65,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false) {
       material: await namaFinal('master_material', kMaterial.value, 'Material'),
       satuan: D.normalkanSatuan(kSatuan.value),
       qty: Number(kQty.value),
-      blok: await namaFinal('master_blok', kBlok.value, 'Blok'),
+      blok: blokBbm?'':await namaFinal('master_blok', kBlok.value, 'Blok'),
       divisi: await namaFinal('master_divisi', kDivisi.value, 'Divisi'),
       // nama pengambil: beda kapital disamakan dengan ejaan yang paling sering
       diambil_oleh: kanonikRiwayat(kOleh.value, D.baris('material_keluar').map((r) => r.diambil_oleh)),
@@ -85,13 +87,17 @@ function formKeluar(barisLama, saatSelesai, bbm=false) {
     if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
     if (nilai.blok) D.pastikanMaster('master_blok', nilai.blok, { divisi: nilai.divisi || null, luas_ha: null });
     if (barisLama) D.ubah('material_keluar', barisLama.id, nilai);
-    else D.tambah('material_keluar', nilai);
+    else if(blokBbm){
+      const parts=blokBbm.ambil();
+      if(blokBbm.mode()==='kosong')D.tambah('material_keluar',{...nilai,blok:''});
+      else{const batch=crypto.randomUUID();D.tambahBatchKeluar(parts.map(r=>({...nilai,...r,batch_id:batch,mode_pembagian:blokBbm.mode()})));}
+    }else D.tambah('material_keluar', nilai);
     pesan(barisLama ? 'Perubahan dicatat.' : 'Material keluar dicatat.', 'sukses');
     p.tutup();
     saatSelesai();
   };
 
-  const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick: simpan })];
+  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}finally{sibuk=false;b.disabled=false;}} })];
   if (barisLama) {
     aksi.unshift(el('button.tombol-bahaya', {
       type: 'button', teks: 'Hapus',
@@ -119,7 +125,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false) {
       isian('Satuan', kSatuan),
       isian('Divisi pemakai *', kDivisi),
     ]),
-    isian('Blok / lokasi', kBlok),
+    blokBbm?blokBbm.elemen:isian('Blok / lokasi (opsional)', kBlok),
     isian('Diambil oleh *', kOleh),
     isian('Untuk keperluan apa? *',kPerlu),
     unitBbm?unitBbm.elemen:isian('Kendaraan / mesin / alat',kUnit),
