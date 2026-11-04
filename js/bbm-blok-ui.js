@@ -14,7 +14,7 @@ export function editorBlokBbm(divisi,total){
  }
  function gambar(){
   const old=new Map(controls.map(x=>[String(x.id),{checked:x.check.checked,qty:x.qty.value}]));kosongkan(tempat);
-  controls=D.baris('master_blok').filter(r=>norm(r.divisi)===norm(divisi.value)).map(r=>{const o=old.get(String(r.id)),check=el('input',{type:'checkbox',checked:o?.checked}),qty=inputAngka(o?.qty||'');qty.setAttribute('aria-label','Liter untuk '+r.nama);check.addEventListener('change',hitung);qty.addEventListener('input',hitung);return {id:r.id,nama:r.nama,luas:r.luas_ha,check,qty};});
+  controls=D.baris('master_blok').filter(r=>norm(r.divisi)===norm(divisi.value)&&D.blokDapatDipilih(r)).map(r=>{const o=old.get(String(r.id)),check=el('input',{type:'checkbox',checked:o?.checked}),qty=inputAngka(o?.qty||'');qty.setAttribute('aria-label','Liter untuk '+r.nama);check.addEventListener('change',hitung);qty.addEventListener('input',hitung);return {id:r.id,nama:r.nama,luas:r.luas_ha,check,qty};});
   tempat.append(el('div.tabel-bungkus',{},[el('table.tabel',{},[el('thead',{},[el('tr',{},['Blok','Luas (ha)','Liter'].map(teks=>el('th',{teks})))]),el('tbody',{},controls.map(r=>el('tr',{},[el('td',{},[el('label',{},[r.check,' '+r.nama])]),el('td',{teks:angka(r.luas,2)}),el('td',{},[r.qty])])) )])]));hitung();
  }
  const add=el('button',{type:'button',teks:'+ Tambah lokasi manual',onclick:()=>{

@@ -10,7 +10,7 @@ export function editorPembagian(divisi,lama=null){
  let controls=[];
  function gambar(){
   const old=new Map(controls.map(x=>[String(x.id),{checked:x.check.checked,qty:x.qty.value}]));
-  kosongkan(tempat);controls=D.baris('master_blok').filter(r=>norm(r.divisi)===norm(divisi())).map(r=>{
+  kosongkan(tempat);controls=D.baris('master_blok').filter(r=>norm(r.divisi)===norm(divisi())&&(D.blokDapatDipilih(r)||lama?.alokasi?.some(a=>String(a.blok_id)===String(r.id)))).map(r=>{
    const saved=old.get(String(r.id)),awal=lama?.alokasi?.find(a=>String(a.blok_id)===String(r.id)),check=el('input',{type:'checkbox',checked:saved?.checked??!!awal}),qty=inputAngka(saved?.qty??awal?.diminta??'');qty.setAttribute('aria-label','Jumlah blok '+r.nama);
    check.addEventListener('change',hitung);qty.addEventListener('input',hitung);
    return {id:r.id,luas:Number(r.luas_ha)||0,check,qty,nama:r.nama};

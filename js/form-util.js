@@ -96,7 +96,7 @@ export function kanonikRiwayat(nilai, daftarLama) {
 /** Input teks dengan daftar saran dari satu tabel master (boleh ketik nama baru). */
 export function inputMaster(sumber, nilai = '', { tempat = '', saatUbah = null } = {}) {
   const idList = 'dl' + Math.random().toString(36).slice(2, 9);
-  const opsi = D.baris(sumber).map((r) => r.nama).sort((a, b) => a.localeCompare(b, 'id'));
+  const opsi = D.baris(sumber).filter((r) => sumber !== 'master_blok' || D.blokDapatDipilih(r)).map((r) => r.nama).sort((a, b) => a.localeCompare(b, 'id'));
   const dl = el('datalist', { id: idList }, opsi.map((n) => el('option', { value: n })));
   const inp = el('input', {
     type: 'text', list: idList, autocomplete: 'off', placeholder: tempat, nilai,
