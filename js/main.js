@@ -27,7 +27,7 @@ const HALAMAN = {
   opname:{l:'Stok Opname',sub:'Hitung fisik Gudang · selisih · persetujuan KTU',buat:halamanOpname},
   dashboard: { l: 'Dashboard', sub: 'Stok saat ini dan SPPB yang belum lengkap', buat: halamanDashboard },
   pusat: { l: 'Kantor Pusat / Order', sub: 'Order bertahap, satuan supplier dan konversi', buat:w=>halamanPengadaan(w,false) },
-  ditunggu:{l:'Barang ditunggu',sub:'Order terbuka dan penerimaan bertahap ke Gudang',buat:w=>halamanPengadaan(w,true)},
+  ditunggu:{l:'Barang ditunggu',sub:'Order terbuka dan penerimaan bertahap ke Gudang atau langsung ke lokasi',buat:w=>halamanPengadaan(w,true)},
   laporan: { l: 'Laporan WA', sub: 'Teks laporan siap tempel ke WhatsApp', buat: halamanLaporan },
   bbm:{l:'BBM',sub:'Stok Gudang · Solar, Pertalite dan Pertamax',buat:halamanBbm},
   'bbm-masuk':{l:'BBM Masuk',sub:'Penerimaan BBM ke Gudang',buat:w=>halamanMasuk(w,true)},
@@ -44,7 +44,7 @@ const HALAMAN = {
 
 const KELOMPOK = [
   { judul: 'Pantauan', item: ['dashboard', 'pusat', 'ditunggu', 'laporan'] },
-  { judul: 'Input data', item: ['permintaan','masuk', 'keluar', 'sppb','opname'] },
+  { judul: 'Input data', item: ['masuk', 'keluar', 'sppb','opname'] },
   { judul: 'BBM', item: ['bbm','bbm-masuk','bbm-keluar'] },
   { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
 ];

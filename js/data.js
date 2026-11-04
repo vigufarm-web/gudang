@@ -424,6 +424,20 @@ export function tutupSisaOrder(id,alasan) {
   o.batal_qty_order=o.faktor_order?r.menunggu/o.faktor_order:o.qty_order;o.ditutup=true;o.alasan_tutup=alasan.trim();
   catatMutasi('Tutup sisa order','pesanan',id,{alasan});tandaiBerubah();
 }
+// Penerimaan langsung tidak pernah dimasukkan ke tabel stok Gudang.
+export function simpanPenerimaanLangsung(raw,id=null) {
+  if(!(P.admin() || P.punya('gudang')) || !P.punya(id?'revisi':'input')) throw Error('Memerlukan hak Gudang dan hak input/revisi.');
+  const lama=id?web().penerimaanLangsung?.[id]:null;
+  if(id&&!lama)throw Error('Penerimaan langsung tidak ditemukan.');
+  const order=web().pesanan?.[raw.order_id],item=order&&cari('sppb_items',order.sppb_item_id);
+  if(!item||statusAcc(item.sppb_id)!==STATUS_ACC.FULL)throw Error('SPPB harus berstatus full acc.');
+  if(lama&&lama.order_id!==raw.order_id)throw Error('Order penerimaan tidak boleh diganti.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(raw.tanggal||'')||!raw.penerima?.trim()||!raw.lokasi_tujuan?.trim())throw Error('Tanggal, nama penerima dan lokasi/divisi tujuan wajib diisi.');
+  const nilai=B.susunPenerimaan(state.data,raw,id),key=id||crypto.randomUUID();
+  const baru={...nilai,id:key,langsung:true,penerima:raw.penerima.trim(),lokasi_tujuan:raw.lokasi_tujuan.trim(),oleh:namaPengisi(),waktu:new Date().toISOString()};
+  (web().penerimaanLangsung ||= {})[key]=baru;
+  catatMutasi(id?'Koreksi penerimaan langsung':'Penerimaan langsung','penerimaanLangsung',key,id?{sebelum:lama,sesudah:baru}:{});tandaiBerubah();return baru;
+}
 export function returPenerimaan(masukId,qty,alasan) {
   P.wajibAdmin();const m=cari('material_masuk',masukId);qty=Number(qty);
   if(!m||!(qty>0)||!Number.isFinite(qty)||qty>B.qtyBersih(state.data,m)+1e-7||!alasan?.trim())throw Error('Jumlah retur harus positif, tidak melebihi penerimaan bersih, dan alasan wajib diisi.');
@@ -612,7 +626,7 @@ export function laporanStokDivisi(kategoriFilter = null) {
 
 // --------------------------------------------------------------- SPPB
 /** Realisasi satu item SPPB = total material masuk yang di-link ke item itu. */
-export const realisasiItem = (itemId) => baris('material_masuk')
+export const realisasiItem = (itemId) => [...baris('material_masuk'),...B.semuaPenerimaanLangsung(state.data)]
   .filter((m) => Number(m.sppb_item_id) === Number(itemId))
   .reduce((n, m) => n + B.qtySppb(state.data,m), 0);
 
@@ -754,7 +768,7 @@ async function saveInternal(pesan,{gisOnly=false}={}) {
       const it=cari('sppb_items',o.sppb_item_id),r=it&&B.ringkasItem(state.data,it);
       if(r&&!r.unknown&&r.diterima+r.menunggu>Number(it.qty_diminta)+1e-7)throw Error('Perubahan bersamaan menyebabkan kelebihan order. Koreksi jumlah atau catat alasan sebelum menyimpan.');
     }
-    for(const m of baris('material_masuk'))if(m.order_id&&!m.alasan_lebih&&JSON.stringify(m)!==JSON.stringify(basis.tabel?.material_masuk?.find(r=>Number(r.id)===Number(m.id)))){
+    for(const m of [...baris('material_masuk'),...B.semuaPenerimaanLangsung(state.data)])if(m.order_id&&!m.alasan_lebih&&JSON.stringify(m)!==JSON.stringify(m.langsung?basis.web?.penerimaanLangsung?.[m.id]:basis.tabel?.material_masuk?.find(r=>Number(r.id)===Number(m.id)))){
       const o=web().pesanan?.[m.order_id],r=o&&B.ringkasOrder(state.data,o);
       if(r&&r.total!=null&&r.diterima>r.total-r.batal+1e-7)throw Error('Penerimaan bersamaan melebihi order. Koreksi atau catat alasan pengecualian.');
     }
@@ -810,6 +824,10 @@ export function gabungTiga(dasar, lokal, remote) {
   const hasil = JSON.parse(JSON.stringify(remote));
   hasil.tabel ||= {};
   const beda = (a, b) => JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
+  for (const [id, row] of Object.entries(lokal.web?.penerimaanLangsung || {})) {
+    const before=dasar.web?.penerimaanLangsung?.[id], other=remote.web?.penerimaanLangsung?.[id];
+    if(beda(row,before)&&beda(other,before)&&beda(row,other))throw Error('Penerimaan langsung yang sama telah diubah di perangkat lain. Muat ulang sebelum mengulangi.');
+  }
   const petaId = {};   // tabel -> Map(id lokal -> id final)
 
   for (const t of TABEL_SEMUA) {
@@ -887,6 +905,7 @@ export function gabungTiga(dasar, lokal, remote) {
     gabungBagian(hasil[bagian], dasar[bagian] || {}, lokal[bagian] || {});
   }
   for(const o of Object.values(hasil.web.pesanan||{}))if(!dasar.web?.pesanan?.[o.id]&&lokal.web?.pesanan?.[o.id]&&petaItem.has(Number(o.sppb_item_id)))o.sppb_item_id=petaItem.get(Number(o.sppb_item_id));
+  for(const r of Object.values(hasil.web.penerimaanLangsung||{}))if(!dasar.web?.penerimaanLangsung?.[r.id]&&lokal.web?.penerimaanLangsung?.[r.id]&&petaItem.has(Number(r.sppb_item_id)))r.sppb_item_id=petaItem.get(Number(r.sppb_item_id));
   for(const r of Object.values(hasil.web.returPenerimaan||{}))if(!dasar.web?.returPenerimaan?.[r.id]&&lokal.web?.returPenerimaan?.[r.id]&&petaId.material_masuk.has(Number(r.masuk_id)))r.masuk_id=petaId.material_masuk.get(Number(r.masuk_id));
 
   // catatan acc mengikuti id SPPB — kalau id SPPB baru lokal dipetakan ulang,
