@@ -14,13 +14,13 @@ export const cakupan = (p, divisi) => !!p && p.aktif !== false &&
 export function bolehHalaman(p, halaman) {
   if (!p || p.aktif === false) return false;
   if (p.admin) return true;
+  if (halaman==='ditunggu') return true;
   if(mandor(p))return ['dashboard','permintaan','sandi'].includes(halaman);
   if (['dashboard','sandi','material-lihat'].includes(halaman)) return true;
   if (halaman==='sppb') return ['sppb','input','revisi','kepala','ktu','order','gudang'].some(h=>punya(p,h));
   if (halaman==='permintaan') return ['minta','kepala','ktu','gudang'].some(h=>punya(p,h));
   if (halaman==='persetujuan') return ['kepala','ktu','batal'].some(h=>punya(p,h));
   if (halaman==='pusat') return punya(p,'order');
-  if (halaman==='ditunggu') return punya(p,'gudang') || punya(p,'order');
   if (['masuk','keluar'].includes(halaman)) return punya(p,'gudang') && (punya(p,'input') || punya(p,'revisi'));
   if (halaman==='opname') return punya(p,'opname') || punya(p,'ktu');
   return false;
