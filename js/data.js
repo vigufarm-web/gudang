@@ -44,6 +44,10 @@ export function baris(tabel) {
   return semua[tabel];
 }
 
+// History remains in the master, but only the active GIS representative is offered for new input.
+export const blokDapatDipilih = (r) => !!r && r.gis_active !== false &&
+  (r.gis_canonical_local_id == null || String(r.gis_canonical_local_id) === String(r.id));
+
 export const cari = (tabel, id) => baris(tabel).find((r) => Number(r.id) === Number(id)) || null;
 
 export const idBaru = (tabel) => baris(tabel).reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
