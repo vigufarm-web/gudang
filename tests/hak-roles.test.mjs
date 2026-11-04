@@ -16,3 +16,14 @@ test('approval and order roles do not get full menus',()=>{
  const order=user({order:true});assert.equal(H.bolehHalaman(order,'pusat'),true);assert.equal(H.bolehHalaman(order,'persetujuan'),false);assert.equal(H.bolehHalaman(order,'pengguna'),false);
  const store=user({gudang:true,input:true},['Gudang']);assert.equal(H.bolehHalaman(store,'masuk'),true);assert.equal(H.bolehHalaman(store,'keluar'),true);assert.equal(H.bolehHalaman(store,'bbm'),false);assert.equal(H.bolehHalaman(store,'pengguna'),false);
 });
+test('all active accounts may view waiting materials without warehouse transaction rights',()=>{
+ for(const p of [user({sppb:true}),user({kepala:true}),user({order:true}),user({}),{...user({minta:true}),peran:'mandor'}]){
+  assert.equal(H.bolehHalaman(p,'ditunggu'),true);
+  assert.equal(H.bolehTransaksi(p,'tambah','material_masuk',null,{divisi:'GIS'},()=>null),false);
+ }
+ assert.equal(H.bolehHalaman({...user({}),aktif:false},'ditunggu'),false);
+ assert.equal(H.bolehHalaman(null,'ditunggu'),false);
+ const gudang=user({gudang:true,input:true});
+ assert.equal(H.bolehHalaman(gudang,'ditunggu'),true);
+ assert.equal(H.bolehTransaksi(gudang,'tambah','material_masuk',null,{divisi:'GIS'},()=>null),true);
+});
