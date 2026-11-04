@@ -61,7 +61,8 @@ const ringkasItem = (s) => {
 async function aksiAcc(s, tahap, muatUlang) {
   if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak persetujuan untuk tahap/divisi ini.','galat'); return; }
   const kepala = D.kepalaDivisi(s.divisi_pemohon);
-  const pejabat = tahap === 'ktu' ? D.ktu() : kepala;
+  const pejabatAsal = tahap === 'ktu' ? D.ktu() : kepala;
+  const pejabat = P.admin() ? pejabatAsal : {...pejabatAsal, nama:P.siapa()?.nama || pejabatAsal?.nama, ttd: P.siapa()?.nama === pejabatAsal?.nama ? pejabatAsal?.ttd : ''};
   const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Divisi ${s.divisi_pemohon || '(tanpa divisi)'}`;
   if (tahap === 'kepala' && !kepala?.nama) {
     pesan(`Kepala divisi untuk divisi "${s.divisi_pemohon || '(kosong)'}" belum dipasang. `

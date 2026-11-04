@@ -87,6 +87,7 @@ export const punya = (hak) => H.punya(siapa(), hak);
 export const cakupan = (divisi) => H.cakupan(siapa(), divisi);
 export const bolehHalaman = (halaman) => H.bolehHalaman(siapa(), halaman);
 export const bolehInput = () => punya('input');
+export const bolehBuatSppb = () => punya('sppb') || punya('input');
 export function bolehUbah(tabel,r) { return H.bolehTransaksi(siapa(),'ubah',tabel,r,r,(id) => D.cari('sppb',id)); }
 export function wajibAdmin() { if (!admin()) throw new Error('Hanya admin OJORA/KTU atau admin yang ditunjuk dapat mengubah pengaturan ini.'); }
 export function jagaTransaksi(aksi, tabel, lama, baru) {
@@ -201,7 +202,10 @@ function formPengguna(wadah,p,kembali) {
       users[id] = nilai;
       if (id === sendiri) sessionStorage.setItem(SESI,JSON.stringify({id,hash:sandi.hash}));
       if (nilai.aktif && nilai.hak.kepala) {
-        for (const d of dipilih) D.setKepalaDivisi(d,{nama:nilai.nama});
+        for (const d of dipilih) {
+          const tercatat = D.kepalaDivisi(d);
+          if (!tercatat?.nama || (p?.nama && H.normal(tercatat.nama) === H.normal(p.nama))) D.setKepalaDivisi(d,{nama:nilai.nama});
+        }
       }
       D.tandaiBerubah(); password.value = '';
       await simpanSekarang('Web: pengaturan pengguna');

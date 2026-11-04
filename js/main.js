@@ -246,9 +246,9 @@ function bangunMenu() {
     kelompok.push(el('div.sisi-kelompok', { teks: g.judul }));
     for (const k of visible) kelompok.push(tautan(k, HALAMAN[k].l));
   }
-  if(P.bolehHalaman('master'))kelompok.push(el('div.sisi-kelompok', { teks: 'Master data' }));
+  if(P.bolehHalaman('master') || P.bolehHalaman('material-lihat'))kelompok.push(el('div.sisi-kelompok', { teks: 'Master data' }));
   for (const [t, def] of Object.entries(MASTER)) {
-    if (P.bolehHalaman('master')) kelompok.push(el('a', { href: `#/master/${t}`, teks: def.judul }));
+    if (P.bolehHalaman('master') || (t==='master_material' && P.bolehHalaman('material-lihat'))) kelompok.push(el('a', { href: `#/master/${t}`, teks: def.judul }));
   }
   kelompok.push(el('div.sisi-kelompok', { teks: 'Sistem' }));
   for (const k of SISTEM) if (P.bolehHalaman(k)) kelompok.push(tautan(k, HALAMAN[k].l));
@@ -349,7 +349,7 @@ async function gambar() {
   elSisi.classList.remove('buka');
   tandaiMenuAktif();
 
-  if (!P.bolehHalaman(nama || 'dashboard')) {
+  if (!P.bolehHalaman(nama === 'master' && arg === 'master_material' && !P.admin() ? 'material-lihat' : (nama || 'dashboard'))) {
     gambarKepala('Akses dibatasi', 'Halaman ini tidak termasuk hak pengguna Anda.');
     kosongkan(elIsi).append(el('p.petunjuk',{teks:'Hubungi OJORA/KTU untuk mengubah hak akses.'}));
     return;

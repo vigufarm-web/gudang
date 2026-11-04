@@ -3,6 +3,7 @@
 // lama yang memakai nama itu — namanya saja tidak muncul lagi di pilihan baru.
 
 import * as D from './data.js?v=8';
+import * as P from './pengguna.js?v=8';
 import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, kesalahan } from './ui.js?v=8';
 import { bisaEdit, spandukLokal } from './main.js?v=8';
 import { miripMaster } from './form-util.js?v=8';
@@ -171,7 +172,7 @@ export async function halamanMaster(wadah, t) {
         data,
         {
           kosong: `Belum ada ${def.judul.toLowerCase()}.`,
-          saatKlik: bisaEdit() ? (r) => formMaster(t, def, r, gambar) : null,
+          saatKlik: bisaEdit() && P.admin() ? (r) => formMaster(t, def, r, gambar) : null,
         },
       ));
     };
@@ -183,7 +184,7 @@ export async function halamanMaster(wadah, t) {
           el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem' }, [
             cari,
             tempatJumlah,
-            bisaEdit() ? el('button.tombol-utama', {
+            bisaEdit() && P.admin() ? el('button.tombol-utama', {
               type: 'button', teks: `+ Tambah ${def.judul.toLowerCase()}`,
               style: 'margin-left:auto',
               onclick: () => formMaster(t, def, null, gambar),
