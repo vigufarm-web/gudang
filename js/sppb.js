@@ -393,6 +393,7 @@ async function cetakSurat(sppbId) {
   const c = D.catatanAcc(sppbId);
   const stAcc = D.statusAcc(sppbId);
   const kepalaAcc = c?.kepala?.status === 'disetujui' ? c.kepala : null;
+  const ttdKepala = kepalaAcc && String(kepalaAcc.oleh || '').trim().toLowerCase() === String(kepala?.nama || '').trim().toLowerCase() ? (kepala?.ttd || '') : '';
   const ktuAcc = c?.ktu?.status === 'disetujui' ? c.ktu : null;
 
   // Peran di surat: ADMIN GUDANG yang membuat, KEPALA KEBUN divisi pemohon
@@ -407,7 +408,7 @@ async function cetakSurat(sppbId) {
         + 'kop + logo, kolom Jumlah Diminta/Disetujui, Beban Biaya, Brand, Keterangan Tujuan Pemakaian, '
         + 'dan 5 kolom ttd: Dibuat, Diminta, Diperiksa, Mengetahui, Diterima.' }),
       el('p', { teks: `Status acc: ${stAcc}. `
-        + (kepalaAcc?.sumber==='manual' ? 'Persetujuan kepala divisi dari arsip manual; gambar tanda tangan tidak ditempel. ' : kepalaAcc ? `Ttd kepala divisi${kepala?.ttd ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
+        + (kepalaAcc?.sumber==='manual' ? 'Persetujuan kepala divisi dari arsip manual; gambar tanda tangan tidak ditempel. ' : kepalaAcc ? `Ttd kepala divisi${ttdKepala ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
         + (ktuAcc?.sumber==='manual' ? 'Persetujuan KTU dari arsip manual; gambar tanda tangan tidak ditempel.' : ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
       isian('Dibuat — Admin Gudang', kAdmin),
       isian(`Diminta — Kepala Divisi ${s.divisi_pemohon || ''}`.trim(),
@@ -520,7 +521,7 @@ async function cetakSurat(sppbId) {
 
     <table style="width:100%;margin-top:30px"><tr>
       ${ttd('Dibuat', kAdmin.value.trim())}
-      ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? (kepala?.ttd || '') : '')}
+      ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? ttdKepala : '')}
       ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ktuAcc && ktuAcc.sumber!=='manual' ? (dataKtu?.ttd || '') : '')}
       ${ttd('Mengetahui', kSetuju.value.trim())}
       ${ttd('Diterima', '')}
@@ -594,7 +595,7 @@ export async function halamanSppb(wadah) {
   taruh(wadah,spandukLokal(),el('div.monitor-pengantar',{},[
     el('div',{},[el('h2',{teks:'Monitoring SPPB'}),el('p',{teks:'Pantau persetujuan, pemesanan, dan penerimaan material dalam satu daftar.'})]),
     el('div.monitor-aksi',{},[
-      bisaEdit()&&P.bolehInput()?el('button.tombol-utama',{type:'button',teks:'+ Buat SPPB',onclick:()=>formSppbBaru(gambar)}):null,
+      bisaEdit()&&P.bolehBuatSppb()?el('button.tombol-utama',{type:'button',teks:'+ Buat SPPB',onclick:()=>formSppbBaru(gambar)}):null,
       el('button.tombol-samar',{type:'button',teks:'Cetak monitoring',onclick:()=>window.print()}),
     ]),
   ]),ringkasan,el('div.lembar.monitor-lembar',{},[el('div.lembar-isi',{},[
