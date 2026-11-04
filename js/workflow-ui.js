@@ -25,7 +25,7 @@ export function formKeluarBanyakBlok(selesai){
 function detailPermintaan(o,repaint){
  const rows=W.rincian(o),jumlah=new Map(),isi=el('div',{},[el('p',{teks:`${o.nomor} · ${o.divisi} · ${o.pemohon.nama} · ${o.status}`}),el('p',{teks:o.keperluan})]);
  isi.append(tabel([{l:'Material',k:'material'},{l:'Blok',k:'blok'},{l:'Luas acuan (ha)',nilai:r=>angka(r.alokasi.luas_ha,2)},{l:'Satuan',k:'satuan'},{l:'Stok Gudang',nilai:r=>angka(D.laporanStok().find(s=>norm(s.material)===norm(r.material)&&samaUnit(s.satuan,r.satuan))?.stok||0,2)},{l:'Diminta',k:'diminta',jenis:'angka',pecahan:2},{l:'Jatah acc terakhir',nilai:r=>(o.kepala||o.ktu)?angka(r.disetujui,2):'Menunggu acc'},{l:'Diserahkan',k:'diserahkan',jenis:'angka',pecahan:2},{l:'Sisa jatah',nilai:r=>(o.kepala||o.ktu)?angka(r.sisa,2):'—'}],rows));
- const aksi=[],can=bisaEdit();let p;const done=()=>{p.tutup();repaint();};
+ const aksi=[],can=false;let p;const done=()=>{p.tutup();repaint();};
  if(can){
   const pemohon=(P.admin()||o.pemohon.id===P.siapa()?.id)&&P.punya('minta')&&P.cakupan(o.divisi);
   if(pemohon&&!rows.some(r=>r.diserahkan>0)){aksi.push(button('Revisi permintaan',()=>{p.tutup();formPermintaan(repaint,o);}));if(o.status==='Draf')aksi.push(button('Ajukan ke Kepala Divisi',()=>simpan(()=>W.ajukanPermintaan(o.id),done)));}
@@ -54,7 +54,7 @@ function detailPermintaan(o,repaint){
 export async function halamanPermintaan(wadah){
  const search=el('input',{type:'search',placeholder:'Cari nomor, mandor, material atau blok…'}),list=el('div');
  const gambar=()=>{kosongkan(list);const q=norm(search.value),docs=W.permintaanTerlihat().filter(o=>!q||norm(JSON.stringify(o)).includes(q)).sort((a,b)=>b.dibuat.localeCompare(a.dibuat));list.append(tabel([{l:'Nomor',k:'nomor'},{l:'Tanggal',k:'tanggal'},{l:'Divisi',k:'divisi'},{l:'Mandor',nilai:o=>o.pemohon.nama},{l:'Status',nilai:o=>o.status==='Full Acc'?(W.rincian(o).every(r=>r.sisa<1e-7)?'Selesai':W.rincian(o).some(r=>r.diserahkan>0)?'Diserahkan sebagian':W.rincian(o).some(r=>r.sisa>(D.laporanStok().find(s=>norm(s.material)===norm(r.material)&&samaUnit(s.satuan,r.satuan))?.stok||0))?'Full Acc · menunggu stok':'Full Acc · siap diserahkan'):o.status},{l:'Material / blok',nilai:o=>o.items.map(it=>it.material+' ('+it.alokasi.map(a=>a.blok||'Umum').join(', ')+')').join('; ')}],docs,{kosong:'Belum ada permintaan.',saatKlik:o=>detailPermintaan(o,gambar)}));};search.addEventListener('input',gambar);
- taruh(wadah,el('p',{teks:'Mandor mengajukan → Kepala Divisi → KTU → Gudang menyerahkan. Acc belum mengurangi stok; penyerahan tercatat sekali di Material Keluar / BBM Keluar.'}),bisaEdit()&&P.punya('minta')?button('+ Permintaan mandor',()=>formPermintaan(gambar)):null,search,list);gambar();
+ taruh(wadah,el('p',{teks:'Arsip permintaan mandor lama hanya untuk dilihat. Permintaan baru menggunakan kertas; penyerahan barang dari Gudang dicatat pada Material Keluar.'}),search,list);gambar();
 }
 function mulaiOpname(repaint){
  const selected=new Set(),list=el('div',{style:'max-height:340px;overflow:auto'}),tanggal=inputTanggal(),search=el('input',{type:'search',placeholder:'Cari material untuk dihitung…'});

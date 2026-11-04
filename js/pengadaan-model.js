@@ -3,11 +3,12 @@ export const unit=v=>({ltr:'liter',l:'liter',litre:'liter',liters:'liter',kilogr
 export const samaUnit=(a,b)=>unit(a)===unit(b);
 const num=v=>Number(v)||0;
 export const semuaOrder=d=>Object.values(d.web?.pesanan||{});
+export const semuaPenerimaanLangsung=d=>Object.values(d.web?.penerimaanLangsung||{});
 export const returBaris=(d,id)=>Object.values(d.web?.returPenerimaan||{}).filter(r=>String(r.masuk_id)===String(id)).reduce((n,r)=>n+num(r.qty_stok),0);
 export const qtyBersih=(d,r)=>Math.max(0,num(r.qty)-returBaris(d,r.id));
 export const qtySppb=(d,r)=>num(r.qty_sppb??r.qty)*(num(r.qty)>0?qtyBersih(d,r)/num(r.qty):0);
 export function ringkasOrder(d,o,kecuali=null) {
-  const masuk=(d.tabel?.material_masuk||[]).filter(r=>r.order_id===o.id&&String(r.id)!==String(kecuali));
+  const masuk=[...(d.tabel?.material_masuk||[]),...semuaPenerimaanLangsung(d)].filter(r=>r.order_id===o.id&&String(r.id)!==String(kecuali));
   const diterima=masuk.reduce((n,r)=>n+qtySppb(d,r),0);
   const total=o.faktor_order>0?o.qty_order*o.faktor_order:null;
   const batal=num(o.batal_qty_order)*(o.faktor_order||0);
@@ -15,7 +16,7 @@ export function ringkasOrder(d,o,kecuali=null) {
 }
 export function ringkasItem(d,it,kecualiOrder=null) {
   const daftar=semuaOrder(d).filter(o=>Number(o.sppb_item_id)===Number(it.id)&&o.id!==kecualiOrder);
-  const diterima=(d.tabel?.material_masuk||[]).filter(r=>Number(r.sppb_item_id)===Number(it.id)).reduce((n,r)=>n+qtySppb(d,r),0);
+  const diterima=[...(d.tabel?.material_masuk||[]),...semuaPenerimaanLangsung(d)].filter(r=>Number(r.sppb_item_id)===Number(it.id)).reduce((n,r)=>n+qtySppb(d,r),0);
   const unknown=daftar.some(o=>ringkasOrder(d,o).menunggu==null && !o.ditutup);
   const menunggu=daftar.reduce((n,o)=>n+(ringkasOrder(d,o).menunggu||0),0);
   return {daftar,diterima,menunggu:unknown?null:menunggu,belum_dipesan:unknown?null:Math.max(0,num(it.qty_diminta)-diterima-menunggu),unknown};

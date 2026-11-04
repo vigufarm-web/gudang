@@ -402,6 +402,7 @@ async function cetakSurat(sppbId) {
   const kAdmin = el('input', { type: 'text',
     nilai: atur.default_nama_admin || D.namaPengisi() || '', placeholder: 'Nama admin gudang' });
   const kSetuju = el('input', { type: 'text', nilai: atur.default_nama_disetujui || '', placeholder: 'Nama direktur' });
+  const kPenerima = el('input', { type: 'text', placeholder: 'Nama penerima barang (opsional)' });
   const lanjut = await new Promise((selesai) => {
     const p = panel('Cetak surat permintaan SPPB', el('div', {}, [
       el('p.bantuan', { teks: `Surat resmi 1 halaman untuk SPPB ${s.no_sppb} mengikuti format SPPB perusahaan: `
@@ -415,7 +416,8 @@ async function cetakSurat(sppbId) {
         el('input', { type: 'text', nilai: kepalaAcc?.oleh || kepala?.nama || '', disabled: true }),
         { bantuan: 'Nama & ttd mengikuti acc / Pengaturan → Kepala divisi & tanda tangan.' }),
       isian('Diperiksa — KTU', el('input', { type: 'text', nilai: ktuAcc?.oleh || dataKtu?.nama || '', disabled: true })),
-      isian('Mengetahui', kSetuju, { bantuan: 'Kolom "Diterima" dibiarkan kosong untuk ttd penerima barang.' }),
+      isian('Mengetahui', kSetuju),
+      isian('Diterima — penerima barang', kPenerima, { bantuan: 'Isi nama petugas Gudang atau penerima langsung di lokasi; tanda tangan dilakukan oleh penerima.' }),
     ]), [el('button.tombol-utama', { type: 'button', teks: 'Buka pratinjau cetak', onclick: () => { p.tutup(); selesai(true); } })]);
   });
   if (!lanjut) return;
@@ -524,7 +526,7 @@ async function cetakSurat(sppbId) {
       ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? ttdKepala : '')}
       ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ktuAcc && ktuAcc.sumber!=='manual' ? (dataKtu?.ttd || '') : '')}
       ${ttd('Mengetahui', kSetuju.value.trim())}
-      ${ttd('Diterima', '')}
+      ${ttd('Diterima', kPenerima.value.trim())}
     </tr></table>
 
     <p class="noprint" style="margin-top:24px"><button onclick="print()">Cetak / simpan PDF</button></p>

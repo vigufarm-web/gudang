@@ -87,7 +87,7 @@ export async function halamanPusat(wadah) {
           { l: 'Material', k: 'material' },
           { l: 'Diminta', nilai: (it) => angka(it.qty_disetujui ?? it.qty_diminta, 2), rata: 'angka' },
           { l: 'Satuan', k: 'satuan' },
-          { l: 'Sampai di gudang', k: 'realisasi', jenis: 'angka', pecahan: 2 },
+          { l: 'Diterima (Gudang / langsung)', k: 'realisasi', jenis: 'angka', pecahan: 2 },
           { l: 'Sisa', k: 'sisa', jenis: 'angka', pecahan: 2 },
           { l: 'Brand', nilai: (it) => it.brand || '–' },
           { l: 'Status', nilai: (it) => chipOrder(D.statusOrderItem(it)) },
@@ -134,8 +134,7 @@ export async function halamanPusat(wadah) {
         el('button.tombol-samar.tombol-kecil', { type: 'button', teks: 'Cetak', onclick: () => window.print() }),
       ]),
       el('p.bantuan', { style: 'margin-top:.3rem', teks:
-        'Admin Semarang menceklis item yang sudah diorder. Kolom "Sampai di gudang" terisi otomatis '
-        + 'dari Material Masuk yang di-link ke item SPPB-nya — sisa berkurang sendiri.' }),
+        'Admin Semarang menceklis item yang sudah diorder. Jumlah diterima mencakup penerimaan Gudang dan penerimaan langsung di lokasi/divisi; sisa berkurang sendiri.' }),
       tempatDaftar,
     ])]),
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
