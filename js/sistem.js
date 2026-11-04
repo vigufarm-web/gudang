@@ -36,14 +36,15 @@ export async function halamanSistem(wadah) {
 
   const bagianEdit = lembar('Mode edit (token GitHub)',
     el('p.bantuan', { teks: 'Token dengan izin Contents: Read and write untuk repo ini. '
-      + 'Hanya tersimpan di perangkat ini, tidak ikut ter-upload.' }),
+      + 'Tersimpan di browser dan profil ini sampai dihapus; tidak ikut ter-upload. '
+      + 'Menghapus data browser, memakai profil lain, atau token kedaluwarsa dapat memerlukan token baru.' }),
     D.modeLokal() ? el('p.petunjuk', { teks: 'Sedang ujicoba di komputer — token belum diperlukan. '
       + 'Isi owner/repo & token setelah situs dibuka lewat alamat GitHub Pages, atau isi manual di bawah untuk mencoba kirim langsung.' }) : null,
     el('div.baris-isian', {}, [
       isian('Owner', kOwner, { bantuan: repoKini?.sumber === 'pages' ? 'Terdeteksi otomatis dari alamat situs.' : null }),
       isian('Repo', kRepo),
     ]),
-    isian('Token', kToken, { bantuan: gh.adaTokenLokal() ? 'Sudah ada token tersimpan di perangkat ini.' : 'Belum ada token di perangkat ini.' }),
+    isian('Token', kToken, { bantuan: gh.adaTokenLokal() ? 'Token sudah tersimpan di browser ini. Kolom dikosongkan demi keamanan; tidak perlu mengisinya lagi saat login.' : 'Belum ada token tersimpan. Tempel token dan klik Uji & simpan token.' }),
     el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap' }, [
       el('button.tombol-utama', {
         type: 'button', teks: 'Uji & simpan token',
@@ -59,8 +60,9 @@ export async function halamanSistem(wadah) {
             if (!token) throw new Error('Isi tokennya dulu.');
             const nama = await gh.periksaToken(token);
             gh.simpanToken(token);
-            pesan(`Token berlaku dan boleh menulis ke ${nama}. Mode edit aktif.`, 'sukses', 6);
-            gambarUlang();
+            kToken.value = '';
+            await gambarUlang();
+            pesan(`Token tersimpan di browser ini dan boleh menulis ke ${nama}. Mode edit aktif.`, 'sukses', 6);
           } catch (err) { pesan(err.message, 'galat', 8); }
           finally { tombol.disabled = false; }
         },
