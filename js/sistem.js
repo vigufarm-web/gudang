@@ -36,7 +36,8 @@ export async function halamanSistem(wadah) {
 
   const bagianEdit = lembar('Mode edit (token GitHub)',
     el('p.bantuan', { teks: 'Token dengan izin Contents: Read and write untuk repo ini. '
-      + 'Tersimpan di browser dan profil ini sampai dihapus; tidak ikut ter-upload. '
+      + 'Secara bawaan tersimpan di browser dan profil ini sampai dihapus. '
+      + 'Admin dapat memilih untuk membagikannya di dalam data terenkripsi. '
       + 'Menghapus data browser, memakai profil lain, atau token kedaluwarsa dapat memerlukan token baru.' }),
     D.modeLokal() ? el('p.petunjuk', { teks: 'Sedang ujicoba di komputer — token belum diperlukan. '
       + 'Isi owner/repo & token setelah situs dibuka lewat alamat GitHub Pages, atau isi manual di bawah untuk mencoba kirim langsung.' }) : null,
@@ -44,7 +45,7 @@ export async function halamanSistem(wadah) {
       isian('Owner', kOwner, { bantuan: repoKini?.sumber === 'pages' ? 'Terdeteksi otomatis dari alamat situs.' : null }),
       isian('Repo', kRepo),
     ]),
-    isian('Token', kToken, { bantuan: gh.adaTokenLokal() ? 'Token sudah tersimpan di browser ini. Kolom dikosongkan demi keamanan; tidak perlu mengisinya lagi saat login.' : 'Belum ada token tersimpan. Tempel token dan klik Uji & simpan token.' }),
+    isian('Token', kToken, { bantuan: gh.adaTokenLokal() ? 'Token sudah tersimpan di browser ini. Kolom dikosongkan demi keamanan; tidak perlu mengisinya lagi saat login.' : D.web().token ? 'Token tersedia melalui data terenkripsi.' : 'Belum ada token tersimpan. Tempel token dan klik Uji & simpan token.' }),
     el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap' }, [
       el('button.tombol-utama', {
         type: 'button', teks: 'Uji & simpan token',
@@ -72,6 +73,55 @@ export async function halamanSistem(wadah) {
         onclick: () => { gh.simpanToken(''); pesan('Token dihapus.', 'sukses'); gambarUlang(); },
       }) : null,
     ]),
+    !D.modeLokal() && GP.siapa()?.admin && gh.adaTokenLokal() && !D.web().token ? el('button.tombol-samar', {
+      type: 'button', teks: 'Bagikan token seperti Payroll',
+      onclick: async (e) => {
+        if (!GP.siapa()?.admin) return;
+        if (D.state.belumDisimpan) return pesan('Simpan perubahan yang tertunda terlebih dahulu.', 'galat');
+        if (!await tanya('Bagikan token Gudang?', 'Siapa pun yang mengetahui password data dapat mengambil token dan mengubah seluruh data di GitHub, termasuk di luar batas hak akses aplikasi.', { ya: 'Bagikan', bahaya: true })) return;
+        e.target.disabled = true;
+        const token = gh.ambilToken();
+        if (!token) { e.target.disabled = false; return pesan('Token pada perangkat ini belum tersedia.', 'galat'); }
+        try {
+          await gh.periksaToken(token);
+          D.web().token = token;
+          D.state.belumDisimpan = true;
+          await D.simpan('Web: bagikan token Gudang');
+          gh.setTokenBersama(token);
+          await gambarUlang();
+          pesan('Token dibagikan melalui data terenkripsi.', 'sukses');
+        } catch (err) {
+          delete D.web().token;
+          D.state.belumDisimpan = false;
+          e.target.disabled = false;
+          pesan('Pembagian belum terkonfirmasi. Muat ulang data untuk memeriksa: ' + err.message, 'galat', 8);
+        }
+      },
+    }) : null,
+    GP.siapa()?.admin && D.web().token ? el('p.bantuan', {teks:'Token dibagikan melalui berkas data terenkripsi. Siapa pun yang mengetahui password data dapat mengambilnya.'}) : null,
+    !D.modeLokal() && GP.siapa()?.admin && D.web().token && gh.adaTokenLokal() ? el('button.tombol-samar', {
+      type: 'button', teks: 'Berhenti membagikan token',
+      onclick: async (e) => {
+        if (!GP.siapa()?.admin) return;
+        if (D.state.belumDisimpan) return pesan('Simpan perubahan yang tertunda terlebih dahulu.', 'galat');
+        if (!await tanya('Berhenti membagikan token?', 'Perangkat lain mungkin masih menyimpan token; cabut token di GitHub jika akses perlu dihentikan seluruhnya.', {ya:'Berhenti',bahaya:true})) return;
+        e.target.disabled = true;
+        const tokenLama = D.web().token;
+        try {
+          delete D.web().token;
+          D.state.belumDisimpan = true;
+          await D.simpan('Web: hentikan pembagian token Gudang');
+          gh.setTokenBersama('');
+          await gambarUlang();
+          pesan('Token tidak lagi dibagikan melalui data.', 'sukses');
+        } catch (err) {
+          D.web().token = tokenLama;
+          D.state.belumDisimpan = false;
+          e.target.disabled = false;
+          pesan('Perubahan belum terkonfirmasi. Muat ulang data untuk memeriksa: ' + err.message, 'galat', 8);
+        }
+      },
+    }) : null,
   );
 
   // ----------------------------------------------------- simpan otomatis
