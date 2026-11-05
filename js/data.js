@@ -900,6 +900,8 @@ export function gabungTiga(dasar, lokal, remote) {
       if (!beda(dl, dd)) continue;   // tidak diubah lokal → ikut remote
       if (objekPolos(dl) && (dd===undefined || objekPolos(dd)) && objekPolos(hasilB[k])) {
         gabungBagian(hasilB[k], dd || {}, dl);
+      } else if (beda(hasilB[k], dd) && beda(hasilB[k], dl)) {
+        throw Error('Pengaturan atau data yang sama sudah diubah di perangkat lain. Perubahan Anda belum disimpan; periksa dan muat ulang data.');
       } else if (dl === undefined) {
         delete hasilB[k];
       } else {
