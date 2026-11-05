@@ -815,8 +815,7 @@ async function saveInternal(pesan,{gisOnly=false}={}) {
  * admin ini), `remote` (yang telanjur tersimpan orang lain).
  * - Baris BARU lokal diberi id baru supaya tidak menabrak baris orang lain
  *   (link sppb_item_id pada material masuk ikut dipetakan ulang).
- * - Baris yang DIUBAH lokal menimpa baris yang sama di remote.
- * - Baris yang DIHAPUS lokal dihapus juga dari remote.
+ * - Perubahan atau penghapusan baris yang sama secara bersamaan ditolak.
  */
 export function gabungTiga(dasar, lokal, remote) {
   assertGISMerge(dasar,lokal,remote);
@@ -834,6 +833,14 @@ export function gabungTiga(dasar, lokal, remote) {
     const bDasar = new Map((dasar.tabel?.[t] || []).map((r) => [Number(r.id), r]));
     const bLokal = lokal.tabel?.[t] || [];
     const idLokal = new Set(bLokal.map((r) => Number(r.id)));
+    const pLokal = new Map(bLokal.map(r => [Number(r.id), r]));
+    const pRemote = new Map((remote.tabel?.[t] || []).map(r => [Number(r.id), r]));
+    for (const [id, asal] of bDasar) {
+      const perubahanLokal = pLokal.get(id), perubahanRemote = pRemote.get(id);
+      if (beda(perubahanLokal, asal) && beda(perubahanRemote, asal) && beda(perubahanLokal, perubahanRemote)) {
+        throw Error(`Data ${t} nomor ${id} sudah diubah di perangkat lain. Perubahan Anda belum disimpan; periksa dan muat ulang data sebelum mengulangi.`);
+      }
+    }
     hasil.tabel[t] ||= [];
     const bHasil = hasil.tabel[t];
     const petaT = new Map();
