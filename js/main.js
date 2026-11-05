@@ -39,7 +39,7 @@ const HALAMAN = {
   riwayat: { l: 'Riwayat perubahan', sub: 'Setiap penyimpanan tercatat di sini', buat: halamanRiwayat },
   sistem: { l: 'Pengaturan', sub: 'Mode edit, token, pejabat & ttd, profil perusahaan', buat: halamanSistem },
   pengguna: { l: 'Pengguna', sub: 'Admin/KTU, kepala divisi, dan hak akses per divisi', buat: halamanPengguna },
-  sandi: {l:'Ganti password/PIN',sub:'Ubah password/PIN akun Anda sendiri',buat:P.halamanSandi},
+  sandi: {l:'Akun saya',sub:'Ubah username atau password/PIN Anda sendiri',buat:P.halamanSandi},
 };
 
 const KELOMPOK = [

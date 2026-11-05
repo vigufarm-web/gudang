@@ -18,24 +18,28 @@ export function siapa() {
 }
 export function keluar() { sessionStorage.removeItem(SESI); }
 
-export async function gantiSandiSendiri(lama, baru, ulang) {
+export async function gantiSandiSendiri(lama, baru, ulang, usernameBaru = '') {
   const pelaku = siapa();
   if (!pelaku) throw new Error('Masuk sebagai pengguna dulu.');
   if (!lama) throw new Error('Password/PIN lama wajib diisi.');
-  if (baru.length < 6) throw new Error('Password/PIN baru minimal 6 karakter.');
+  usernameBaru = usernameBaru.trim();
+  if (usernameBaru && !/^[A-Za-z0-9_.-]{2,40}$/.test(usernameBaru)) throw new Error('Username harus 2–40 huruf/angka, titik, garis bawah atau tanda minus.');
+  if (!baru && !usernameBaru) throw new Error('Isi username baru atau password/PIN baru.');
+  if (baru && baru.length < 6) throw new Error('Password/PIN baru minimal 6 karakter.');
   if (baru !== ulang) throw new Error('Ulangan password/PIN baru tidak sama.');
-  if (baru === lama) throw new Error('Gunakan password/PIN yang berbeda dari sebelumnya.');
+  if (baru && baru === lama) throw new Error('Gunakan password/PIN yang berbeda dari sebelumnya.');
   if (D.state.belumDisimpan) throw new Error('Simpan perubahan data yang belum tersimpan terlebih dahulu.');
   if (!gh.lokasiRepo() || !gh.ambilToken()) throw new Error('Token GitHub pada perangkat ini diperlukan. Minta admin memasangnya melalui Pengaturan → Mode edit.');
-  const sandi = await H.hashSandi(baru);
+  const sandi = baru ? await H.hashSandi(baru) : null;
   for (let percobaan = 0; percobaan < 3; percobaan++) {
     const {isi,sha} = await gh.bacaFile(D.PATH);
     const terbaru = await bukaAmplop(isi,D.state.password);
     const pengguna = terbaru.web?.pengguna?.[pelaku.id];
     if (!pengguna || pengguna.aktif === false || pengguna.sandi?.hash !== pelaku.sandi.hash ||
         !await H.periksaSandi(lama,pengguna.sandi)) throw new Error('Password/PIN lama salah atau akun sudah berubah. Masuk ulang jika diperlukan.');
+    if (usernameBaru && Object.entries(terbaru.web.pengguna).some(([id,u]) => id !== pelaku.id && H.normal(u.username) === H.normal(usernameBaru))) throw new Error('Username sudah dipakai. Pilih username lain.');
     if (siapa()?.id !== pelaku.id || D.state.belumDisimpan) throw new Error('Sesi atau data berubah. Coba kembali setelah menyimpan data.');
-    terbaru.web.pengguna[pelaku.id] = {...pengguna,sandi};
+    terbaru.web.pengguna[pelaku.id] = {...pengguna,username:usernameBaru || pengguna.username,sandi:sandi || pengguna.sandi};
     terbaru.rev = (Number(terbaru.rev) || 0) + 1;
     terbaru.dibuat = new Date().toISOString().slice(0,19);
     terbaru.dari = `Web — ${pengguna.nama}`;
@@ -48,7 +52,7 @@ export async function gantiSandiSendiri(lama, baru, ulang) {
       const lokal = adaInputBaru ? D.gabungTiga(JSON.parse(D.state.dasarJson),D.state.data,terbaru) : terbaru;
       D.hapusDraf();
       Object.assign(D.state,{data:lokal,meta,sha:shaBaru,dasarJson:JSON.stringify(terbaru),belumDisimpan:adaInputBaru});
-      if (masihSama) sessionStorage.setItem(SESI,JSON.stringify({id:pelaku.id,hash:sandi.hash}));
+      if (masihSama) sessionStorage.setItem(SESI,JSON.stringify({id:pelaku.id,hash:(sandi || pengguna.sandi).hash}));
       if (adaInputBaru) D.tandaiBerubah();
       return terbaru.rev;
     } catch(e) {
@@ -60,22 +64,23 @@ export async function gantiSandiSendiri(lama, baru, ulang) {
 export async function halamanSandi(wadah) {
   if (!siapa()) throw new Error('Masuk sebagai pengguna dulu.');
   const lama=el('input',{type:'password',autocomplete:'current-password',required:true});
-  const baru=el('input',{type:'password',autocomplete:'new-password',minlength:6,required:true});
-  const ulang=el('input',{type:'password',autocomplete:'new-password',minlength:6,required:true});
+  const username=el('input',{type:'text',autocomplete:'off',placeholder:'Kosongkan jika tetap'});
+  const baru=el('input',{type:'password',autocomplete:'new-password',minlength:6});
+  const ulang=el('input',{type:'password',autocomplete:'new-password',minlength:6});
   const hasil=el('div',{role:'status','aria-live':'polite'});
-  const tombol=el('button.tombol-utama',{type:'submit',teks:'Simpan password baru'});
+  const tombol=el('button.tombol-utama',{type:'submit',teks:'Simpan perubahan akun'});
   let sedang=false;
   const form=el('form',{onsubmit:async(e)=>{
     e.preventDefault(); if(sedang)return; sedang=true; tombol.disabled=true; hasil.textContent='';
     try {
-      const rev=await gantiSandiSendiri(lama.value,baru.value,ulang.value);
-      lama.value='';baru.value='';ulang.value='';
-      hasil.className='petunjuk';hasil.textContent=`Password/PIN berhasil diganti dan tersimpan ke GitHub (rev ${rev}). Gunakan password/PIN baru saat masuk berikutnya.`;
+      const rev=await gantiSandiSendiri(lama.value,baru.value,ulang.value,username.value);
+      lama.value='';baru.value='';ulang.value='';username.value='';
+      hasil.className='petunjuk';hasil.textContent=`Akun berhasil diperbarui dan tersimpan ke GitHub (rev ${rev}). Gunakan username dan password/PIN terbaru saat masuk berikutnya.`;
     } catch(err) {hasil.className='kesalahan';hasil.textContent=err.message;}
     finally {sedang=false;tombol.disabled=false;}
   }},[
-    el('p',{teks:'Ubah password/PIN akun yang sedang masuk. Password data tetap sama.'}),
-    isian('Password / PIN lama',lama),isian('Password / PIN baru',baru,{bantuan:'Minimal 6 karakter.'}),
+    el('p',{teks:'Ubah username dan/atau password/PIN akun yang sedang masuk. Nama pencatat dan password data tetap sama.'}),
+    isian('Password / PIN lama',lama),isian('Username baru (opsional)',username),isian('Password / PIN baru (opsional)',baru,{bantuan:'Minimal 6 karakter bila diubah.'}),
     isian('Ulangi password / PIN baru',ulang),hasil,tombol,
     el('p.bantuan',{teks:'Perubahan langsung disimpan ke GitHub dan memerlukan token pada perangkat ini. Tidak perlu menunggu simpan otomatis.'}),
   ]);
