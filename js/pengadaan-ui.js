@@ -112,7 +112,7 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
       const items=D.laporanSppb().filter(s=>D.statusAcc(s.id)===D.STATUS_ACC.FULL).flatMap(s=>s.items.filter(it=>!it.batal).map(it=>({...it,no:s.no_sppb,divisi:s.divisi_pemohon,s:D.ringkasPengadaan(it)})))
         .filter(it=>!cari||B.norm([it.no,it.material,it.divisi].join(' ')).includes(cari));
       konten.append(el('div.lembar',{style:'margin-top:1rem'},[el('div.lembar-isi',{},[
-        el('h2',{teks:'Kebutuhan per item SPPB'}),tabel([{l:'SPPB / Divisi',nilai:it=>`${it.no} · ${it.divisi}`},{l:'Material',k:'material'},
+        el('h2',{teks:'Kebutuhan per item SPPB'}),tabel([{l:'SPPB / Divisi',nilai:it=>`${it.no} · ${it.divisi}`},{l:'Tanggal permintaan',nilai:it=>tanggal(D.cari('sppb',it.sppb_id)?.tanggal)},{l:'Material',k:'material'},
           {l:'Diminta',nilai:it=>`${jml(it.qty_diminta,3)} ${it.satuan}`},{l:'Diterima bersih',nilai:it=>`${jml(it.s.diterima)} ${it.satuan}`},
           {l:'Menunggu datang',nilai:it=>it.s.menunggu==null?'Konversi belum lengkap':`${jml(it.s.menunggu)} ${it.satuan}`},
           {l:'Belum dipesan',nilai:it=>it.s.belum_dipesan==null?'Belum dapat dihitung':`${jml(it.s.belum_dipesan)} ${it.satuan}`},
