@@ -14,7 +14,7 @@ import {
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
 } from './form-util.js?v=8';
 
-function formKeluar(barisLama, saatSelesai, bbm=false) {
+function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
   if(barisLama?.permintaan_id){pesan('Penyerahan terhubung ke '+barisLama.no_permintaan+'. Buka Permintaan Mandor untuk melihat riwayatnya.','awas');return;}
   if (barisLama && !P.bolehUbah('material_keluar',barisLama)) return;
   const tempatGalat = el('div');
@@ -31,7 +31,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false) {
   const kQty = inputAngka(barisLama?.qty);
   const kBlok = inputMaster('master_blok', barisLama?.blok || '');
   const kDivisi = inputMaster('master_divisi', barisLama?.divisi || '');
-  const blokBbm=bbm&&!barisLama?editorBlokBbm(kDivisi,kQty):null;
+  const blokBbm=bbm&&!barisLama?editorBlokBbm(kDivisi,kQty,{banyak:banyakBlok}):null;
   // saran nama pengambil dari riwayat, supaya ejaannya konsisten
   const idOleh = 'dlo' + Math.random().toString(36).slice(2, 9);
   const riwayatOleh = [...new Set(D.baris('material_keluar').map((r) => rapikan(r.diambil_oleh)).filter(Boolean))]
@@ -173,7 +173,7 @@ export async function halamanKeluar(wadah, bbm=false) {
           type: 'button', teks: bbm?'+ Catat BBM keluar':'+ Catat material keluar',
           onclick: () => formKeluar(null, gambarTabel,bbm),
         }) : null,
-        !bbm&&bisaEdit()&&P.bolehInput()?el('button',{teks:'+ Banyak blok',onclick:()=>formKeluarBanyakBlok(gambarTabel)}):null,
+        bisaEdit()&&P.bolehInput()?el('button',{teks:'+ Banyak blok',onclick:()=>bbm?formKeluar(null,gambarTabel,true,true):formKeluarBanyakBlok(gambarTabel)}):null,
         tempatRingkas,
       ]),
       filter.elemen,

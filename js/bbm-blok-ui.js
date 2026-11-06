@@ -3,8 +3,8 @@ import {el,isian,kosongkan,angka} from './ui.js?v=8';
 import {inputAngka} from './form-util.js?v=8';
 import {susunPembagianBbm} from './bbm-model.js?v=8';
 import {norm} from './pengadaan-model.js?v=8';
-export function editorBlokBbm(divisi,total){
- const mode=el('select',{},[el('option',{value:'kosong',teks:'Tanpa blok / lokasi'}),el('option',{value:'manual',teks:'Isi jumlah per blok / lokasi'}),el('option',{value:'luas',teks:'Proporsi luas Master Blok'})]),tempat=el('div'),info=el('p.bantuan'),lokasi=el('div');let controls=[],extra=[];
+export function editorBlokBbm(divisi,total,{banyak=false}={}){
+ const mode=el('select',{},[el('option',{value:'kosong',teks:'Tanpa blok / lokasi'}),el('option',{value:'manual',teks:'Isi jumlah per blok / lokasi'}),el('option',{value:'luas',teks:'Proporsi luas Master Blok',selected:banyak})]),tempat=el('div'),info=el('p.bantuan'),lokasi=el('div');let controls=[],extra=[];
  const raw=()=>({divisi:divisi.value,total:Number(total.value),mode:mode.value,alokasi:[...controls.filter(x=>x.check.checked).map(x=>({blok_id:x.id,qty:x.qty.value})),...extra.map(x=>({blok:x.nama.value,qty:x.qty.value}))]});
  function hitung(){
   const kosong=mode.value==='kosong',auto=mode.value==='luas';tempat.hidden=kosong;lokasi.hidden=kosong;add.hidden=kosong||auto;info.textContent=kosong?'Opsional: blok/lokasi boleh kosong. Divisi pemakai tetap dicatat.':'';
