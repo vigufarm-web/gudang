@@ -9,3 +9,7 @@ export function gambarUntukAcc(data,acc,pejabat){
  }
  return normal(acc.oleh)&&normal(acc.oleh)===normal(pejabat?.nama)?pejabat?.ttd||'':'';
 }
+export function gambarUntukPembuat(data,s,namaCetak){
+ if(!s?.dibuat_oleh_id||normal(namaCetak)!==normal(s.dibuat_oleh))return '';
+ return gambarUntukAcc(data,{status:'disetujui',oleh_id:s.dibuat_oleh_id,ttd_versi:s.dibuat_ttd_versi},null);
+}
