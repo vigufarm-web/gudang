@@ -2,7 +2,7 @@ import * as D from './data.js?v=8';
 import * as H from './hak.js?v=8';
 import * as gh from './github.js?v=8';
 import {bukaAmplop, kunciAmplop} from './kunci.js?v=8';
-import {el, kosongkan, taruh, isian, pesan, tanya} from './ui.js?v=8';
+import {el, kosongkan, taruh, isian, pesan, tanya, panel} from './ui.js?v=8';
 let bisaEdit = () => false;
 let simpanSekarang = async () => { throw new Error('Penyimpanan belum siap.'); };
 export function hubungkanAplikasi(opsi) { bisaEdit = opsi.bisaEdit; simpanSekarang = opsi.simpan; }
@@ -17,6 +17,25 @@ export function siapa() {
   } catch { return null; }
 }
 export function keluar() { sessionStorage.removeItem(SESI); }
+
+export function setTtdPengguna(id,gambar) {
+  const actor=siapa(),target=D.web().pengguna?.[id];
+  if(!actor||!target||(actor.id!==id&&!actor.admin))throw Error('Hanya pemilik atau admin dapat mengubah tanda tangan ini.');
+  if(gambar!=='' && (typeof gambar!=='string'||gambar.length>700000||!/^[A-Za-z0-9+/]+={0,2}$/.test(gambar)))throw Error('Gambar tanda tangan tidak valid atau terlalu besar.');
+  const w=D.web();w.ttdPengguna ||= {};
+  if(!gambar){delete w.ttdPengguna[id];D.tandaiBerubah();return;}
+  const versi=crypto.randomUUID();w.ttdVersi ||= {};w.ttdVersi[versi]={pemilik_id:id,gambar,waktu:new Date().toISOString()};
+  w.ttdPengguna[id]={versi};D.tandaiBerubah();
+}
+export function ttdAktif(id){const w=D.web(),v=w.ttdPengguna?.[id]?.versi,r=v&&w.ttdVersi?.[v];return r?.pemilik_id===id?r.gambar||'':'';}
+async function formTtd(p,kembali){
+ if(!siapa()||(siapa().id!==p.id&&!admin()))throw Error('Tidak berhak mengatur tanda tangan pengguna ini.');
+ const {padTtd}=await import('./sistem.js?v=8');const pad=padTtd(ttdAktif(p.id));
+ let busy=false;const save=async(gambar)=>{if(busy)return;busy=true;try{if(!bisaEdit())throw Error('Mode edit diperlukan untuk menyimpan.');setTtdPengguna(p.id,gambar);await simpanSekarang('Web: perbarui tanda tangan pengguna');if(D.state.belumDisimpan){pesan('Tanda tangan belum tersimpan ke GitHub.','awas',9);return;}pesan('Tanda tangan tersimpan.','sukses');dlg.tutup();kembali();}catch(e){pesan(e.message,'galat',8);}finally{busy=false;}};
+ const aksi=[el('button.tombol-utama',{type:'button',teks:'Simpan tanda tangan',onclick:()=>{const gambar=pad.ambil();if(!gambar){pesan('Unggah gambar atau gambar tanda tangan terlebih dahulu.','awas');return;}return save(gambar);}})];
+ if(ttdAktif(p.id))aksi.unshift(el('button.tombol-samar',{type:'button',teks:'Hapus tanda tangan',onclick:async()=>{if(await tanya('Hapus tanda tangan aktif?','ACC lama mempertahankan tanda tangan yang tercatat saat disetujui.',{ya:'Hapus',bahaya:true}))await save('');}}));
+ const dlg=panel(`Tanda tangan — ${p.nama}`,el('div',{},[el('p.bantuan',{teks:'Tanda tangan ini dipakai pada ACC baru yang dilakukan oleh akun ini. ACC sebelumnya tetap menggunakan tanda tangan saat disetujui.'}),pad.elemen]),aksi);
+}
 
 export async function gantiSandiSendiri(lama, baru, ulang, usernameBaru = '') {
   const pelaku = siapa();
@@ -84,7 +103,8 @@ export async function halamanSandi(wadah) {
     isian('Ulangi password / PIN baru',ulang),hasil,tombol,
     el('p.bantuan',{teks:'Perubahan langsung disimpan ke GitHub dan memerlukan token pada perangkat ini. Tidak perlu menunggu simpan otomatis.'}),
   ]);
-  kosongkan(wadah).append(el('div.lembar',{},[el('div.lembar-isi',{},[form])]));
+  const me=siapa();
+  kosongkan(wadah).append(el('div.lembar',{},[el('div.lembar-isi',{},[form])]),el('div.lembar',{},[el('div.lembar-isi',{},[el('h2',{teks:'Tanda tangan saya'}),el('p.bantuan',{teks:ttdAktif(me.id)?'Tanda tangan sudah terpasang.':'Belum ada tanda tangan.'}),el('button.tombol-samar',{type:'button',teks:'Atur tanda tangan saya',disabled:!bisaEdit(),onclick:()=>formTtd(me,()=>halamanSandi(wadah))})])]));
 }
 export const admin = () => siapa()?.admin === true;
 export const mandor = () => H.mandor(siapa());
@@ -157,6 +177,7 @@ export async function halamanPengguna(wadah) {
         el('p',{teks:`${p.admin ? 'Admin / KTU · semua divisi' : `${p.peran || 'Pengguna'} · ${(p.divisi || []).join(', ') || 'belum ada divisi'}`} · ${p.aktif === false ? 'Nonaktif' : 'Aktif'}`}),
         el('p.bantuan',{teks:p.admin ? 'Semua hak, termasuk kelola pengguna.' : H.HAK.filter(([k]) => p.hak?.[k]).map(([,l]) => l).join(' · ') || 'Lihat saja'}),
         el('button.tombol-samar',{type:'button',teks:'Ubah pengguna & hak akses',disabled:!bisaEdit(),onclick:() => formPengguna(wadah,p,gambar)}),
+        el('button.tombol-samar',{type:'button',teks:'Atur tanda tangan',disabled:!bisaEdit(),onclick:()=>formTtd(p,gambar)}),
       ])]));
     }
     taruh(wadah,el('h2',{teks:'Pengguna & hak akses'}),

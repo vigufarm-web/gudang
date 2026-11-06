@@ -9,6 +9,7 @@ import { bisaEdit, spandukLokal } from './main.js?v=8';
 import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=8';
 import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
+import {gambarUntukAcc} from './ttd-model.js';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -393,8 +394,9 @@ async function cetakSurat(sppbId) {
   const c = D.catatanAcc(sppbId);
   const stAcc = D.statusAcc(sppbId);
   const kepalaAcc = c?.kepala?.status === 'disetujui' ? c.kepala : null;
-  const ttdKepala = kepalaAcc && String(kepalaAcc.oleh || '').trim().toLowerCase() === String(kepala?.nama || '').trim().toLowerCase() ? (kepala?.ttd || '') : '';
   const ktuAcc = c?.ktu?.status === 'disetujui' ? c.ktu : null;
+  const ttdKepala = gambarUntukAcc(D.state.data,kepalaAcc,kepala);
+  const ttdKtu = gambarUntukAcc(D.state.data,ktuAcc,dataKtu);
 
   // Peran di surat: ADMIN GUDANG yang membuat, KEPALA KEBUN divisi pemohon
   // yang meminta, KTU yang memeriksa, Direktur menyetujui di atas kertas.
@@ -410,7 +412,7 @@ async function cetakSurat(sppbId) {
         + 'dan 5 kolom ttd: Dibuat, Diminta, Diperiksa, Mengetahui, Diterima.' }),
       el('p', { teks: `Status acc: ${stAcc}. `
         + (kepalaAcc?.sumber==='manual' ? 'Persetujuan kepala divisi dari arsip manual; gambar tanda tangan tidak ditempel. ' : kepalaAcc ? `Ttd kepala divisi${ttdKepala ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
-        + (ktuAcc?.sumber==='manual' ? 'Persetujuan KTU dari arsip manual; gambar tanda tangan tidak ditempel.' : ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
+        + (ktuAcc?.sumber==='manual' ? 'Persetujuan KTU dari arsip manual; gambar tanda tangan tidak ditempel.' : ktuAcc ? `Ttd KTU${ttdKtu ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan saat ACC).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
       isian('Dibuat — Admin Gudang', kAdmin, { bantuan: s.dibuat_oleh ? 'Nama mengikuti pengguna yang membuat SPPB.' : 'Pembuat SPPB lama belum tercatat; isi nama yang benar untuk cetakan ini.' }),
       isian(`Diminta — Kepala Divisi ${s.divisi_pemohon || ''}`.trim(),
         el('input', { type: 'text', nilai: kepalaAcc?.oleh || kepala?.nama || '', disabled: true }),
@@ -521,7 +523,7 @@ async function cetakSurat(sppbId) {
     <table style="width:100%;margin-top:30px"><tr>
       ${ttd('Dibuat', kAdmin.value.trim())}
       ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? ttdKepala : '')}
-      ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ktuAcc && ktuAcc.sumber!=='manual' ? (dataKtu?.ttd || '') : '')}
+      ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ttdKtu)}
       ${ttd('Mengetahui', kSetuju.value.trim())}
       ${ttd('Diterima', kPenerima.value.trim())}
     </tr></table>
