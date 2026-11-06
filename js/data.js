@@ -340,7 +340,8 @@ export function setujuiSppb(sppbId, tahap, oleh) {
   }
   const c = catatanAccTulis(sppbId);
   if (c[tahap]?.status === 'ditolak') throw new Error('SPPB ini sudah ditolak. Kembalikan dulu ke antrean.');
-  c[tahap] = { status: 'disetujui', oleh: rapikan(oleh), waktu: sekarang() };
+  const pelaku=P.siapa(), versi=web().ttdPengguna?.[pelaku.id]?.versi || null;
+  c[tahap] = { status: 'disetujui', oleh: rapikan(oleh), waktu: sekarang(), oleh_id:pelaku.id, ttd_versi:versi };
   catatJejak(c, `acc ${tahap === 'ktu' ? 'KTU' : 'kepala divisi'}`, oleh);
   tandaiBerubah();
 }

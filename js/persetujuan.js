@@ -62,7 +62,7 @@ async function aksiAcc(s, tahap, muatUlang) {
   if (!P.bolehAcc(s,tahap)) { pesan('Tidak memiliki hak persetujuan untuk tahap/divisi ini.','galat'); return; }
   const kepala = D.kepalaDivisi(s.divisi_pemohon);
   const pejabatAsal = tahap === 'ktu' ? D.ktu() : kepala;
-  const pejabat = P.admin() ? pejabatAsal : {...pejabatAsal, nama:P.siapa()?.nama || pejabatAsal?.nama, ttd: P.siapa()?.nama === pejabatAsal?.nama ? pejabatAsal?.ttd : ''};
+  const pejabat = {...pejabatAsal, nama:P.siapa()?.nama || '', ttd:P.ttdAktif(P.siapa()?.id)};
   const jabatan = tahap === 'ktu' ? 'KTU' : `Kepala Divisi ${s.divisi_pemohon || '(tanpa divisi)'}`;
   if (tahap === 'kepala' && !kepala?.nama) {
     pesan(`Kepala divisi untuk divisi "${s.divisi_pemohon || '(kosong)'}" belum dipasang. `
@@ -176,7 +176,7 @@ export async function halamanPersetujuan(wadah) {
         el('h3', { style: 'margin:.7rem 0 .3rem' }, [
           `${divisi} `,
           el('span.bantuan', {
-            teks: kepala?.nama ? `— Kepala divisi: ${kepala.nama}${kepala.pin ? ' · PIN terpasang' : ' · tanpa PIN'}${kepala.ttd ? ' · ttd tersimpan' : ' · ttd belum ada'}`
+            teks: kepala?.nama ? `— Kepala divisi: ${kepala.nama}${kepala.pin ? ' · PIN terpasang' : ' · tanpa PIN'}`
               : '— kepala divisi belum dipasang (Pengaturan → Kepala divisi & tanda tangan)',
           }),
         ]),
@@ -196,7 +196,7 @@ export async function halamanPersetujuan(wadah) {
         'SPPB baru dan SPPB yang direvisi masuk ke antrean ini. Klik baris untuk melihat detail & jejaknya.',
         isiKepala),
       lembar(`Menunggu acc KTU (${tungguKtu.length})`,
-        D.ktu().nama ? `KTU: ${D.ktu().nama}${D.ktu().pin ? ' · PIN terpasang' : ' · tanpa PIN'}${D.ktu().ttd ? ' · ttd tersimpan' : ' · ttd belum ada'}`
+        D.ktu().nama ? `KTU: ${D.ktu().nama}${D.ktu().pin ? ' · PIN terpasang' : ' · tanpa PIN'}`
           : 'Nama KTU belum dipasang (Pengaturan → Kepala divisi & tanda tangan).',
         tabel([
           ...kolomDasar,

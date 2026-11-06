@@ -404,7 +404,7 @@ async function bersihkanFotoTtd(dataUrl) {
   hasil.getContext('2d').drawImage(k, x0, y0, hasil.width, hasil.height, 0, 0, hasil.width, hasil.height);
   return hasil.toDataURL('image/png').split(',')[1];
 }
-function padTtd(ttdAwal) {
+export function padTtd(ttdAwal) {
   const kanvas = el('canvas', {
     width: 440, height: 150,
     style: 'border:1px dashed var(--garis);border-radius:8px;background:#fff;touch-action:none;width:100%;max-width:440px',
