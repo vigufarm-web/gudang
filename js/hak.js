@@ -2,12 +2,12 @@
 export const normal = (v) => String(v || '').trim().toLowerCase();
 export const HAK = [
   ['minta','Buat permintaan material mandor'],['opname','Catat stok opname Gudang'],
-  ['sppb', 'Buat SPPB saja'], ['input', 'Input transaksi baru'], ['revisi', 'Revisi dan hapus transaksi'],
+  ['sppb', 'Buat SPPB saja'], ['input', 'Input transaksi baru'], ['revisi', 'Revisi transaksi dan ajukan hapus'],
   ['kepala', 'Persetujuan kepala divisi'], ['ktu', 'Persetujuan KTU'],
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
-  ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'],
+  ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'], ['bbm','Akses BBM masuk dan keluar'],
 ];
-export const mandor=p=>!!p&&!p.admin&&(p.peran==='mandor'||(p.hak?.minta===true&&!['sppb','input','revisi','kepala','ktu','gudang','order','opname'].some(k=>p.hak?.[k])));
+export const mandor=p=>!!p&&!p.admin&&(p.peran==='mandor'||(p.hak?.minta===true&&!['sppb','input','revisi','kepala','ktu','gudang','order','opname','bbm'].some(k=>p.hak?.[k])));
 export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || ((!mandor(p)||hak==='minta')&&p.hak?.[hak] === true));
 export const cakupan = (p, divisi) => !!p && p.aktif !== false &&
   (p.admin === true || (Array.isArray(p.divisi) && p.divisi.some((d) => normal(d) === normal(divisi))));
@@ -21,6 +21,8 @@ export function bolehHalaman(p, halaman) {
   if (halaman==='permintaan') return ['minta','kepala','ktu','gudang'].some(h=>punya(p,h));
   if (halaman==='persetujuan') return ['kepala','ktu','batal'].some(h=>punya(p,h));
   if (halaman==='pusat') return punya(p,'order');
+  if (halaman==='persetujuan-hapus') return punya(p,'ktu');
+  if (['bbm','bbm-masuk','bbm-keluar'].includes(halaman)) return punya(p,'bbm')&&(punya(p,'input')||punya(p,'revisi'));
   if (['masuk','keluar'].includes(halaman)) return punya(p,'gudang') && (punya(p,'input') || punya(p,'revisi'));
   if (halaman==='opname') return punya(p,'opname') || punya(p,'ktu');
   return false;
@@ -29,6 +31,8 @@ export function bolehTransaksi(p, aksi, tabel, lama, baru, cariSppb) {
   if (!p || p.aktif === false) return false;
   if (p.admin) return true;
   if (tabel.startsWith('master_')) return false;
+  const isBBM=(r)=>['solar','pertalite','pertamax','bbm'].includes(normal(r?.material));
+  if (['material_masuk','material_keluar'].includes(tabel) && (isBBM(lama)||isBBM(baru)) && !punya(p,'bbm')) return false;
   const buatSppb = aksi === 'tambah' && ['sppb','sppb_items'].includes(tabel) && punya(p,'sppb');
   if (!buatSppb && !punya(p, aksi === 'tambah' ? 'input' : 'revisi')) return false;
   if(punya(p,'gudang')&&['material_masuk','material_keluar'].includes(tabel))return true;

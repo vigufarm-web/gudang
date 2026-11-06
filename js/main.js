@@ -19,6 +19,7 @@ import { halamanPusat } from './pusat.js?v=8';
 import {halamanPengadaan} from './pengadaan-ui.js?v=8';
 import * as P from './pengguna.js?v=8';
 import { halamanPengguna } from './pengguna.js?v=8';
+import {halamanPersetujuanHapus} from './persetujuan-hapus.js';
 
 const akar = document.getElementById('akar');
 
@@ -36,6 +37,7 @@ const HALAMAN = {
   keluar: { l: 'Material Keluar', sub: 'Barang yang diambil dari gudang', buat: halamanKeluar },
   sppb: { l: 'SPPB', sub: 'Surat Permintaan Pembelian Barang & realisasinya', buat: halamanSppb },
   persetujuan: { l: 'Persetujuan SPPB', sub: 'Admin membuat → kepala divisi yang minta meng-acc → KTU memeriksa', buat: halamanPersetujuan },
+  'persetujuan-hapus': {l:'Persetujuan hapus',sub:'Permintaan dan riwayat penghapusan transaksi',buat:halamanPersetujuanHapus},
   riwayat: { l: 'Riwayat perubahan', sub: 'Setiap penyimpanan tercatat di sini', buat: halamanRiwayat },
   sistem: { l: 'Pengaturan', sub: 'Mode edit, token, pejabat & ttd, profil perusahaan', buat: halamanSistem },
   pengguna: { l: 'Pengguna', sub: 'Admin/KTU, kepala divisi, dan hak akses per divisi', buat: halamanPengguna },
@@ -46,7 +48,7 @@ const KELOMPOK = [
   { judul: 'Pantauan', item: ['dashboard', 'pusat', 'ditunggu', 'laporan'] },
   { judul: 'Input data', item: ['masuk', 'keluar', 'sppb','opname'] },
   { judul: 'BBM', item: ['bbm','bbm-masuk','bbm-keluar'] },
-  { judul: 'Kepala divisi & KTU', item: ['persetujuan'] },
+  { judul: 'Kepala divisi & KTU', item: ['persetujuan','persetujuan-hapus'] },
 ];
 const SISTEM = ['sandi', 'pengguna', 'riwayat', 'sistem'];
 
@@ -237,6 +239,7 @@ function bangunMenu() {
       const n = D.jumlahMenungguAcc();
       if (n) a.append(el('span.lencana', { teks: String(n) }));
     }
+    if (kunci === 'persetujuan-hapus') {const n=Object.values(D.web().permintaanHapus||{}).filter(x=>x.status==='menunggu').length;if(n)a.append(el('span.lencana',{teks:String(n)}));}
     return a;
   };
 
