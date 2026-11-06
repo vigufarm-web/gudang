@@ -9,7 +9,7 @@ import { bisaEdit, spandukLokal } from './main.js?v=8';
 import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=8';
 import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
-import {gambarUntukAcc} from './ttd-model.js';
+import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -109,7 +109,8 @@ export function formSppbBaru(saatSelesai,referensi=null) {
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
     if (divisi) D.pastikanMaster('master_divisi', divisi);
     for (const it of items) D.pastikanMaster('master_material',it.material,{satuan_default:it.satuan});
-    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value), dibuat_oleh: P.siapa()?.nama || '', ...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
+    const pembuat = P.siapa();
+    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value), dibuat_oleh: pembuat?.nama || '', dibuat_oleh_id: pembuat?.id || null, dibuat_ttd_versi: D.web().ttdPengguna?.[pembuat?.id]?.versi || null, ...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
     for (const it of items) {
       D.pastikanMaster('master_material', it.material, { satuan_default: it.satuan });
       D.tambah('sppb_items', { sppb_id: s.id, ...it });
@@ -521,7 +522,7 @@ async function cetakSurat(sppbId) {
     ${nBatal ? `<div style="font-size:12px;margin-top:2px;color:#444">Catatan: ${nBatal} item dibatalkan saat proses persetujuan dan tidak tercantum di surat ini.</div>` : ''}
 
     <table style="width:100%;margin-top:30px"><tr>
-      ${ttd('Dibuat', kAdmin.value.trim())}
+      ${ttd('Dibuat', kAdmin.value.trim(), gambarUntukPembuat(D.state.data,s,kAdmin.value.trim()))}
       ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? ttdKepala : '')}
       ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ttdKtu)}
       ${ttd('Mengetahui', kSetuju.value.trim())}
