@@ -10,6 +10,7 @@ import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=8'
 import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
 import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
+import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=20261106';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -537,6 +538,7 @@ async function cetakSurat(sppbId) {
 // --------------------------------------------------------------- halaman
 export async function halamanSppb(wadah) {
   const filter={kata:'',divisi:'',dari:'',sampai:'',tahap:'semua',status:'semua'};
+  let untukLaporan=[];
   const ringkasan=el('div.monitor-ringkasan');
   const tab=el('div.monitor-tab',{'aria-label':'Tahap monitoring'});
   const hasil=el('div.monitor-hasil');
@@ -571,6 +573,7 @@ export async function halamanSppb(wadah) {
     galat.hidden=!(filter.dari && filter.sampai && filter.dari>filter.sampai);
     galat.textContent=galat.hidden?'':'Tanggal awal harus sebelum atau sama dengan tanggal akhir.';
     const tampil=galat.hidden?semua.filter(s=>cocokFilter(s,filter)):[];
+    untukLaporan=tampil;
     jumlah.textContent=`Menampilkan ${tampil.length} dari ${semua.length} SPPB${filter.status!=='semua'?' · '+filter.status:''}. Klik baris untuk rincian material dan penerimaan.`;
     kosongkan(hasil).append(tabel([
       {l:'SPPB',nilai:s=>el('div',{},[el('strong',{teks:s.no_sppb}),el('small.monitor-tanggal',{teks:tanggal(s.tanggal)})])},
@@ -594,14 +597,18 @@ export async function halamanSppb(wadah) {
     Object.assign(filter,{kata:'',divisi:'',dari:'',sampai:'',tahap:'semua',status:'semua'});
     cari.value='';divisi.value='';dari.value='';sampai.value='';gambar();
   };
+  const metaLaporan=()=>`Tanggal SPPB ${filter.dari||'awal'} s.d. ${filter.sampai||'akhir'} · Divisi: ${filter.divisi||'semua'} · Tahap: ${tahapLabel.find(([k])=>k===filter.tahap)?.[1]||filter.tahap} · Status: ${filter.status} · Pencarian: ${filter.kata||'semua'} · ${untukLaporan.length} SPPB · Revisi ${D.state.data?.rev??'—'}${D.state.belumDisimpan?' · ADA PERUBAHAN BELUM DISIMPAN':''}`;
+  const buatLaporan=async(jenis)=>{try{if(!galat.hidden)throw Error('Tanggal awal harus sebelum atau sama dengan tanggal akhir.');if(!untukLaporan.length)throw Error('Tidak ada SPPB yang sesuai filter.');const meta=metaLaporan();if(jenis==='excel')await unduhLaporanSppb(untukLaporan,meta);else cetakLaporanSppb(untukLaporan,meta);}catch(e){pesan(e.message,'galat',8);}};
   taruh(wadah,spandukLokal(),el('div.monitor-pengantar',{},[
     el('div',{},[el('h2',{teks:'Monitoring SPPB'}),el('p',{teks:'Pantau persetujuan, pemesanan, dan penerimaan material dalam satu daftar.'})]),
     el('div.monitor-aksi',{},[
       bisaEdit()&&P.bolehBuatSppb()?el('button.tombol-utama',{type:'button',teks:'+ Buat SPPB',onclick:()=>formSppbBaru(gambar)}):null,
       el('button.tombol-samar',{type:'button',teks:'Cetak monitoring',onclick:()=>window.print()}),
+      el('button.tombol-samar',{type:'button',teks:'Cetak rincian / PDF',onclick:()=>buatLaporan('pdf')}),
+      el('button.tombol-samar',{type:'button',teks:'Unduh rincian Excel',onclick:()=>buatLaporan('excel')}),
     ]),
   ]),ringkasan,el('div.lembar.monitor-lembar',{},[el('div.lembar-isi',{},[
-    tab,el('div.monitor-filter',{},[isian('Pencarian',cari),isian('Divisi',divisi),isian('Dari tanggal',dari),isian('Sampai tanggal',sampai),
+    el('p.bantuan',{teks:'Cetak rincian / PDF dan Excel mengikuti filter SPPB di bawah, dan menampilkan semua item pada dokumen yang cocok.'}),tab,el('div.monitor-filter',{},[isian('Pencarian',cari),isian('Divisi',divisi),isian('Dari tanggal',dari),isian('Sampai tanggal',sampai),
       el('button.tombol-samar',{type:'button',teks:'Reset filter',onclick:reset})]),galat,jumlah,hasil,
   ])]));
   gambar();
