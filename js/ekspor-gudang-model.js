@@ -7,8 +7,14 @@ export function susunLaporanPengadaan(data, dokumen) {
   for (const s of dokumen) for (const it of s.items || []) {
     const r = B.ringkasItem(data, it);
     const legacy = !!data.web?.orderItem?.[String(it.id)] && !r.daftar.length;
+    const statusOrder = it.batal ? 'Item dibatalkan' : legacy ? 'Ceklis lama: jumlah belum diketahui'
+      : r.unknown ? 'Order ada: konversi belum lengkap'
+      : r.menunggu > 1e-7 ? 'Sudah diorder: menunggu datang'
+      : r.daftar.length && r.daftar.every(o=>o.ditutup) ? 'Order ditutup'
+      : r.daftar.length ? 'Order ada: tidak ada sisa menunggu'
+      : r.diterima > 1e-7 ? 'Sudah diterima tanpa rincian order' : 'Belum ada rincian order';
     item.push({nomor:s.no_sppb,tanggal:s.tanggal,divisi:s.divisi_pemohon,material:it.material,
-      satuan:it.satuan,diminta:Number(it.qty_diminta)||0,diterima:r.diterima,status_acc:s.acc||'',status_item:it.status||'',
+      satuan:it.satuan,diminta:Number(it.qty_diminta)||0,diterima:r.diterima,status_acc:s.acc||'',status_item:it.status||'',status_order:statusOrder,
       menunggu:legacy?null:r.menunggu,belum_dipesan:legacy?null:r.belum_dipesan,dibatalkan:!!it.batal,
       catatan:legacy?'Ceklis order lama tanpa rincian jumlah':r.unknown?'Konversi order belum diketahui':''});
     for (const o of r.daftar) {

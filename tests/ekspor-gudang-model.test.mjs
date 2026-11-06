@@ -7,6 +7,7 @@ test('laporan membedakan diterima, menunggu, dan belum dipesan dalam satuan SPPB
  const d={tabel:{material_masuk:[{id:1,order_id:'o',sppb_item_id:7,material:'Semen',qty:2,qty_sppb:2,satuan:'sak'}]},web:{pesanan:{o:{id:'o',nomor:'ORD-1',sppb_item_id:7,material:'Semen',qty_order:5,faktor_order:1,satuan_order:'sak',satuan_sppb:'sak'}},returPenerimaan:{},penerimaanLangsung:{}}};
  const r=susunLaporanPengadaan(d,[{no_sppb:'1',items:[it]}]);
  assert.equal(r.item[0].diterima,2);assert.equal(r.item[0].menunggu,3);assert.equal(r.item[0].belum_dipesan,5);
+ assert.match(r.item[0].status_order,/menunggu datang/);
  assert.equal(r.order[0].total_sppb,5);assert.equal(r.penerimaan.length,1);
 });
 test('order tanpa konversi tidak dilaporkan nol',()=>{
@@ -24,4 +25,5 @@ test('ceklis order lama tanpa rincian tidak dianggap belum dipesan',()=>{
  const d={tabel:{material_masuk:[]},web:{pesanan:{},orderItem:{'7':{oleh:'Arsip'}},penerimaanLangsung:{}}};
  const r=susunLaporanPengadaan(d,[{no_sppb:'1',items:[it]}]);
  assert.equal(r.item[0].menunggu,null);assert.equal(r.item[0].belum_dipesan,null);assert.match(r.item[0].catatan,/tanpa rincian/);
+ assert.match(r.item[0].status_order,/Ceklis lama/);
 });
