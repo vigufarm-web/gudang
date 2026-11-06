@@ -27,3 +27,11 @@ test('all active accounts may view waiting materials without warehouse transacti
  assert.equal(H.bolehHalaman(gudang,'ditunggu'),true);
  assert.equal(H.bolehTransaksi(gudang,'tambah','material_masuk',null,{divisi:'GIS'},()=>null),true);
 });
+test('Laporan WA hanya terbuka untuk pengguna yang diberi hak dan admin',()=>{
+ const etik=user({gudang:true,input:true,laporan:true});
+ assert.equal(H.bolehHalaman(etik,'laporan'),true);
+ assert.equal(H.bolehHalaman(user({gudang:true,input:true}),'laporan'),false);
+ assert.equal(H.bolehHalaman(user({sppb:true}),'laporan'),false);
+ assert.equal(H.bolehHalaman({...etik,aktif:false},'laporan'),false);
+ assert.equal(H.bolehHalaman({aktif:true,admin:true},'laporan'),true);
+});
