@@ -19,3 +19,9 @@ test('BBM dipisah tanpa menggabungkan namanya',()=>{
  const r=pisahBbm([{material:'Solar'},{material:'Pertalite'},{material:'Besi'}]);
  assert.deepEqual(r.bbm.map(x=>x.material),['Solar','Pertalite']);assert.equal(r.material.length,1);
 });
+test('ceklis order lama tanpa rincian tidak dianggap belum dipesan',()=>{
+ const it={id:7,material:'Pupuk',satuan:'kg',qty_diminta:10};
+ const d={tabel:{material_masuk:[]},web:{pesanan:{},orderItem:{'7':{oleh:'Arsip'}},penerimaanLangsung:{}}};
+ const r=susunLaporanPengadaan(d,[{no_sppb:'1',items:[it]}]);
+ assert.equal(r.item[0].menunggu,null);assert.equal(r.item[0].belum_dipesan,null);assert.match(r.item[0].catatan,/tanpa rincian/);
+});
