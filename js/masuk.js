@@ -4,7 +4,7 @@ import {adalahBbm,JENIS_BBM} from './bbm-model.js?v=8';
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import {formTerimaOrder,formRetur} from './pengadaan-ui.js?v=8';
-import { el, kosongkan, taruh, pesan, tanya, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
+import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
 import { bisaEdit, spandukLokal } from './main.js?v=8';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
@@ -84,8 +84,9 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
   if (barisLama) {
     if(P.admin())aksi.push(el('button.tombol-samar',{type:'button',teks:'Retur ke supplier',onclick:()=>formRetur(barisLama,()=>{p.tutup();saatSelesai();})}));
     aksi.unshift(el('button.tombol-bahaya', {
-      type: 'button', teks: 'Hapus',
+      type: 'button', teks: P.admin()?'Hapus':'Ajukan hapus',
       onclick: async () => {
+        if (!P.admin()) {const alasan=await mintaTeks('Ajukan hapus transaksi','Transaksi tetap tercatat sampai disetujui admin atau KTU.',{label:'Alasan',wajib:true});if(alasan==null)return;D.ajukanHapus('material_masuk',barisLama.id,alasan);pesan('Permintaan dicatat; tunggu tersimpan dan keputusan admin/KTU.','sukses');p.tutup();saatSelesai();return;}
         if (!await tanya('Hapus baris material masuk ini?',
           `${tanggal(barisLama.tanggal)} — ${barisLama.material}, ${angka(barisLama.qty, 2)} ${barisLama.satuan || ''}`,
           { ya: 'Hapus', bahaya: true })) return;

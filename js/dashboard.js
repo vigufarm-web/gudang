@@ -88,6 +88,7 @@ export async function halamanDashboard(wadah) {
 
   taruh(wadah,
     spandukLokal(),
+    P.punya('ktu')?el('div.petunjuk',{},[el('a',{href:'#/persetujuan-hapus',teks:`Persetujuan hapus: ${Object.values(D.web().permintaanHapus||{}).filter(x=>x.status==='menunggu').length} menunggu · ${Object.keys(D.web().riwayatHapus||{}).length} penghapusan tercatat. Buka rincian →`})]):null,
     tombolLaporanExcel(),
     kartu,
     el('div.monitor-ringkasan',{style:'grid-template-columns:repeat(3,minmax(0,1fr))'},['Pertalite','Pertamax','Solar'].map(nama=>{

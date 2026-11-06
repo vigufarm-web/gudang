@@ -104,21 +104,27 @@ export function ubah(tabel, id, tambalan) {
   return r;
 }
 
-export function hapus(tabel, id) {
+export function hapus(tabel, id, persetujuanId = null) {
   assertGISMasterStructure(state.data,'gudang',tabel);
   const semua = baris(tabel);
   const i = semua.findIndex((r) => Number(r.id) === Number(id));
   if (i < 0) return false;
   if(tabel==='material_keluar'&&semua[i].permintaan_id)throw Error('Penyerahan permintaan tidak boleh dihapus dari Material Keluar.');
-  P.jagaTransaksi('hapus', tabel, semua[i], null);
+  const transaksi = ['material_masuk','material_keluar'].includes(tabel);
+  const izin = persetujuanId && web().permintaanHapus?.[persetujuanId];
+  if (transaksi && !P.admin()) {
+    if (!P.punya('ktu') || !izin || izin.status !== 'menunggu' || izin.tabel !== tabel || Number(izin.baris_id) !== Number(id) || JSON.stringify(izin.snapshot) !== JSON.stringify(semua[i])) throw Error('Penghapusan memerlukan persetujuan admin atau KTU.');
+  } else P.jagaTransaksi('hapus', tabel, semua[i], null);
   if(tabel==='sppb'&&B.semuaOrder(state.data).some(o=>baris('sppb_items').some(it=>Number(it.sppb_id)===Number(id)&&Number(o.sppb_item_id)===Number(it.id))))throw Error('SPPB sudah memiliki order. Tutup sisa order terlebih dahulu; riwayat SPPB tidak boleh dihapus.');
   if(tabel==='sppb_items'&&B.semuaOrder(state.data).some(o=>Number(o.sppb_item_id)===Number(id)))throw Error('Item sudah memiliki order dan tidak boleh dihapus.');
   if(tabel==='material_masuk'&&(semua[i].order_id||B.returBaris(state.data,id)>0))throw Error('Penerimaan order tidak boleh dihapus. Gunakan koreksi atau retur agar riwayat tetap utuh.');
+  if(tabel==='material_masuk') {const row=semua[i],s=laporanStok().find(x=>B.norm(x.material)===B.norm(row.material)&&B.samaUnit(x.satuan,row.satuan));if((s?.stok||0)-B.qtyBersih(state.data,row)<-1e-7)throw Error('Penghapusan membuat stok negatif. Periksa transaksi dan gunakan koreksi.');}
   if (tabel === 'sppb_items') {
     gugurkanAcc(semua[i].sppb_id, `item "${semua[i].material}" dihapus`);
     // ceklis order item ini ikut dibuang — id item bisa terpakai ulang
     if (state.data?.web?.orderItem) delete state.data.web.orderItem[String(id)];
   }
+  if(transaksi){const w=web();w.riwayatHapus ||= {};const k=crypto.randomUUID();w.riwayatHapus[k]={id:k,tabel,baris_id:id,snapshot:{...semua[i]},oleh:namaPengisi(),waktu:new Date().toISOString(),permintaan_id:persetujuanId||null};}
   semua.splice(i, 1);
   // ikut aturan aplikasi desktop: menghapus SPPB/itemnya tidak menghapus
   // material masuk yang sudah tercatat — hanya melepas link-nya.
@@ -136,6 +142,26 @@ export function hapus(tabel, id) {
   }
   tandaiBerubah();
   return true;
+}
+
+export function ajukanHapus(tabel,id,alasan) {
+  if(!['material_masuk','material_keluar'].includes(tabel))throw Error('Jenis transaksi tidak didukung.');
+  const r=cari(tabel,id), pelaku=P.siapa();if(!r||!pelaku)throw Error('Transaksi atau pengguna tidak ditemukan.');
+  P.jagaTransaksi('hapus',tabel,r,null);
+  if(!String(alasan||'').trim())throw Error('Alasan penghapusan wajib diisi.');
+  if(tabel==='material_masuk'&&(r.order_id||B.returBaris(state.data,id)>0))throw Error('Penerimaan order/retur tidak dapat dihapus; gunakan koreksi atau retur.');
+  if(tabel==='material_keluar'&&r.permintaan_id)throw Error('Penyerahan permintaan tidak dapat dihapus dari sini.');
+  const w=web();w.permintaanHapus ||= {};
+  if(Object.values(w.permintaanHapus).some(x=>x.status==='menunggu'&&x.tabel===tabel&&Number(x.baris_id)===Number(id)))throw Error('Transaksi ini sudah menunggu persetujuan hapus.');
+  const key=crypto.randomUUID();w.permintaanHapus[key]={id:key,tabel,baris_id:id,snapshot:{...r},alasan:String(alasan).trim(),pemohon:pelaku.nama,pemohon_id:pelaku.id,waktu:new Date().toISOString(),status:'menunggu'};
+  tandaiBerubah();return key;
+}
+export function putusHapus(id,setuju,alasan='') {
+  if(!P.punya('ktu'))throw Error('Hanya admin atau KTU dapat memutuskan.');
+  const r=web().permintaanHapus?.[id];if(!r||r.status!=='menunggu')throw Error('Permintaan tidak tersedia atau sudah diputuskan.');
+  if(!setuju&&!String(alasan).trim())throw Error('Alasan penolakan wajib diisi.');
+  if(setuju){const sekarang=cari(r.tabel,r.baris_id);if(!sekarang||JSON.stringify(sekarang)!==JSON.stringify(r.snapshot))throw Error('Transaksi sudah berubah atau terhapus. Tolak permintaan ini dan periksa ulang.');hapus(r.tabel,r.baris_id,id);}
+  r.status=setuju?'disetujui':'ditolak';r.diputus_oleh=namaPengisi();r.diputus_pada=new Date().toISOString();r.catatan=String(alasan).trim();tandaiBerubah();
 }
 
 export function tambahBatchKeluar(rows,dariPermintaan=false){

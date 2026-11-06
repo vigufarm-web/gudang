@@ -83,11 +83,13 @@ export function auditWorkflow(){
  const used=new Set();for(const o of opname())if(['Draf','Diajukan'].includes(o.status))for(const r of o.items){const k=norm(r.material)+'|'+unit(r.satuan);requireThat(!used.has(k),'Ada opname bersamaan untuk material yang sama. Muat ulang data.');used.add(k);}
 }
 export function jagaGabungWorkflow(dasar,lokal,remote){
- for(const bagian of ['permintaanMaterial','stokOpname'])for(const [id,l] of Object.entries(lokal.web?.[bagian]||{})){const b=dasar.web?.[bagian]?.[id],r=remote.web?.[bagian]?.[id];if(JSON.stringify(l)!==JSON.stringify(b)&&JSON.stringify(r)!==JSON.stringify(b)&&JSON.stringify(l)!==JSON.stringify(r))throw Error('Dokumen permintaan/opname yang sama telah diubah perangkat lain. Simpan draf sebagai referensi lalu muat ulang sebelum mengulangi tindakan.');}
+ for(const bagian of ['permintaanMaterial','stokOpname','permintaanHapus'])for(const [id,l] of Object.entries(lokal.web?.[bagian]||{})){const b=dasar.web?.[bagian]?.[id],r=remote.web?.[bagian]?.[id];if(JSON.stringify(l)!==JSON.stringify(b)&&JSON.stringify(r)!==JSON.stringify(b)&&JSON.stringify(l)!==JSON.stringify(r))throw Error('Dokumen permintaan/opname/penghapusan yang sama telah diubah perangkat lain. Simpan draf sebagai referensi lalu muat ulang sebelum mengulangi tindakan.');}
 }
 
 export function validasiSimpanWorkflow(basis){
  auditWorkflow();
+ const h=new Set();for(const r of Object.values(D.web().permintaanHapus||{}))if(r.status==='menunggu'){const k=r.tabel+':'+r.baris_id;requireThat(!h.has(k),'Ada permintaan hapus ganda untuk transaksi yang sama. Muat ulang data.');h.add(k);}
+ for(const lama of basis.tabel?.material_masuk||[])if(!D.cari('material_masuk',lama.id)){const s=D.laporanStok().find(x=>norm(x.material)===norm(lama.material)&&samaUnit(x.satuan,lama.satuan));requireThat((s?.stok||0)>=-1e-7,'Penghapusan penerimaan dan transaksi bersamaan membuat stok negatif. Muat ulang dan periksa.');}
  for(const o of opname()){
   const lama=basis.web?.stokOpname?.[o.id];if(JSON.stringify(o)===JSON.stringify(lama))continue;
   if(o.status!=='Disetujui'&&lama?.status!=='Disetujui')continue;
