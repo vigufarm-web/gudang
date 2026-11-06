@@ -6,10 +6,11 @@ export function susunLaporanPengadaan(data, dokumen) {
   const item = [], order = [], penerimaan = [];
   for (const s of dokumen) for (const it of s.items || []) {
     const r = B.ringkasItem(data, it);
+    const legacy = !!data.web?.orderItem?.[String(it.id)] && !r.daftar.length;
     item.push({nomor:s.no_sppb,tanggal:s.tanggal,divisi:s.divisi_pemohon,material:it.material,
       satuan:it.satuan,diminta:Number(it.qty_diminta)||0,diterima:r.diterima,status_acc:s.acc||'',status_item:it.status||'',
-      menunggu:r.menunggu,belum_dipesan:r.belum_dipesan,dibatalkan:!!it.batal,
-      catatan:r.unknown?'Konversi order belum diketahui':''});
+      menunggu:legacy?null:r.menunggu,belum_dipesan:legacy?null:r.belum_dipesan,dibatalkan:!!it.batal,
+      catatan:legacy?'Ceklis order lama tanpa rincian jumlah':r.unknown?'Konversi order belum diketahui':''});
     for (const o of r.daftar) {
       const q=B.ringkasOrder(data,o);
       order.push({sppb:s.no_sppb,nomor:o.nomor||o.id,tanggal:o.tanggal,supplier:o.supplier,
