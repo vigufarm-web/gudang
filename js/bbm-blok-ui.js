@@ -10,7 +10,7 @@ export function editorBlokBbm(divisi,total){
   const kosong=mode.value==='kosong',auto=mode.value==='luas';tempat.hidden=kosong;lokasi.hidden=kosong;add.hidden=kosong||auto;info.textContent=kosong?'Opsional: blok/lokasi boleh kosong. Divisi pemakai tetap dicatat.':'';
   for(const r of controls)r.qty.disabled=auto||!r.check.checked;
   for(const r of extra){r.qty.disabled=auto;r.nama.disabled=auto;}
-  if(!kosong){try{const rows=susunPembagianBbm(raw(),D.baris('master_blok'));if(auto)controls.filter(r=>r.check.checked).forEach((r,i)=>r.qty.value=rows[i].qty);info.textContent=`Terbagi ${angka(rows.reduce((n,r)=>n+r.qty,0),2)} dari ${angka(total.value,2)} Liter · ${rows.length} blok/lokasi`;}catch(e){info.textContent=e.message;}}
+  if(!kosong){try{const rows=susunPembagianBbm(raw(),D.baris('master_blok'));if(auto)controls.filter(r=>r.check.checked).forEach((r,i)=>r.qty.value=rows[i].qty);info.textContent=`Terbagi ${angka(rows.reduce((n,r)=>n+r.qty,0),2)} dari ${angka(total.value,2)} Liter · ${rows.length} blok/lokasi`;}catch(e){info.textContent=!controls.length&&!extra.length?(divisi.value.trim()?'Tidak ada blok aktif untuk divisi ini pada data GIS yang dimuat.':'Isi divisi pemakai untuk melihat blok GIS.') : e.message;}}
  }
  function gambar(){
   const old=new Map(controls.map(x=>[String(x.id),{checked:x.check.checked,qty:x.qty.value}]));kosongkan(tempat);
@@ -22,6 +22,6 @@ export function editorBlokBbm(divisi,total){
   nama.addEventListener('input',hitung);qty.addEventListener('input',hitung);
   const card=el('div',{style:'border-bottom:1px solid var(--garis-tipis);padding:.5rem 0'},[isian('Nama lokasi manual',nama),isian('Liter lokasi manual',qty),el('button',{type:'button',teks:'Hapus lokasi',onclick:()=>{extra=extra.filter(x=>x!==r);card.remove();hitung();}})]);lokasi.append(card);hitung();
  }});
- divisi.addEventListener('change',gambar);total.addEventListener('input',hitung);mode.addEventListener('change',()=>{if(mode.value==='luas'&&extra.length){extra=[];kosongkan(lokasi);}hitung();});gambar();
+ divisi.addEventListener('input',gambar);divisi.addEventListener('change',gambar);total.addEventListener('input',hitung);mode.addEventListener('change',()=>{if(mode.value==='luas'&&extra.length){extra=[];kosongkan(lokasi);}gambar();});gambar();
  return {elemen:el('div',{},[isian('Blok / lokasi BBM (opsional)',mode),info,tempat,lokasi,add]),ambil:()=>susunPembagianBbm(raw(),D.baris('master_blok')),mode:()=>mode.value};
 }
