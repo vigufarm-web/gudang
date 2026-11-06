@@ -108,7 +108,7 @@ export function formSppbBaru(saatSelesai,referensi=null) {
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
     if (divisi) D.pastikanMaster('master_divisi', divisi);
     for (const it of items) D.pastikanMaster('master_material',it.material,{satuan_default:it.satuan});
-    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value),...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
+    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value), dibuat_oleh: P.siapa()?.nama || '', ...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
     for (const it of items) {
       D.pastikanMaster('master_material', it.material, { satuan_default: it.satuan });
       D.tambah('sppb_items', { sppb_id: s.id, ...it });
@@ -400,7 +400,7 @@ async function cetakSurat(sppbId) {
   // yang meminta, KTU yang memeriksa, Direktur menyetujui di atas kertas.
   // Tanda tangan tahap yang sudah acc ikut tertempel otomatis di suratnya.
   const kAdmin = el('input', { type: 'text',
-    nilai: atur.default_nama_admin || D.namaPengisi() || '', placeholder: 'Nama admin gudang' });
+    nilai: s.dibuat_oleh || '', placeholder: 'Isi pembuat jika belum tercatat' });
   const kSetuju = el('input', { type: 'text', nilai: atur.default_nama_disetujui || '', placeholder: 'Nama direktur' });
   const kPenerima = el('input', { type: 'text', placeholder: 'Nama penerima barang (opsional)' });
   const lanjut = await new Promise((selesai) => {
@@ -411,7 +411,7 @@ async function cetakSurat(sppbId) {
       el('p', { teks: `Status acc: ${stAcc}. `
         + (kepalaAcc?.sumber==='manual' ? 'Persetujuan kepala divisi dari arsip manual; gambar tanda tangan tidak ditempel. ' : kepalaAcc ? `Ttd kepala divisi${ttdKepala ? ' tertempel otomatis' : ' (gambar ttd belum tersimpan — kolomnya kosong untuk ttd basah)'}. ` : 'Kolom kepala divisi kosong untuk ttd basah. ')
         + (ktuAcc?.sumber==='manual' ? 'Persetujuan KTU dari arsip manual; gambar tanda tangan tidak ditempel.' : ktuAcc ? `Ttd KTU${dataKtu?.ttd ? ' tertempel otomatis.' : ' (gambar ttd belum tersimpan).'}` : 'Kolom KTU kosong untuk ttd basah.') }),
-      isian('Dibuat — Admin Gudang', kAdmin),
+      isian('Dibuat — Admin Gudang', kAdmin, { bantuan: s.dibuat_oleh ? 'Nama mengikuti pengguna yang membuat SPPB.' : 'Pembuat SPPB lama belum tercatat; isi nama yang benar untuk cetakan ini.' }),
       isian(`Diminta — Kepala Divisi ${s.divisi_pemohon || ''}`.trim(),
         el('input', { type: 'text', nilai: kepalaAcc?.oleh || kepala?.nama || '', disabled: true }),
         { bantuan: 'Nama & ttd mengikuti acc / Pengaturan → Kepala divisi & tanda tangan.' }),
@@ -425,9 +425,6 @@ async function cetakSurat(sppbId) {
   if (bisaEdit() && P.admin()) {
     if ((atur.default_nama_disetujui || '') !== kSetuju.value.trim()) {
       D.setPengaturan('default_nama_disetujui', kSetuju.value.trim());
-    }
-    if ((atur.default_nama_admin || '') !== kAdmin.value.trim()) {
-      D.setPengaturan('default_nama_admin', kAdmin.value.trim());
     }
   }
 
