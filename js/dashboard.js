@@ -9,6 +9,7 @@ import * as D from './data.js?v=8';
 import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js?v=8';
 import { spandukLokal } from './main.js?v=8';
 import { kecil } from './form-util.js?v=8';
+import {tombolLaporanExcel} from './ekspor-gudang.js';
 
 export async function halamanDashboard(wadah) {
   if(P.mandor())return dashboardMandor(wadah);
@@ -87,6 +88,7 @@ export async function halamanDashboard(wadah) {
 
   taruh(wadah,
     spandukLokal(),
+    tombolLaporanExcel(),
     kartu,
     el('div.monitor-ringkasan',{style:'grid-template-columns:repeat(3,minmax(0,1fr))'},['Pertalite','Pertamax','Solar'].map(nama=>{
       const stok=stokSemua.filter(r=>kecil(r.material)===kecil(nama)&&['liter','ltr','l'].includes(kecil(r.satuan))).reduce((n,r)=>n+r.stok,0);
