@@ -9,7 +9,7 @@ import * as D from './data.js?v=8';
 import { el, kosongkan, taruh, tabel, angka, tanggal } from './ui.js?v=8';
 import { spandukLokal } from './main.js?v=8';
 import { kecil } from './form-util.js?v=8';
-import {tombolLaporanExcel} from './ekspor-gudang.js?v=status-order-20261106';
+import {tombolLaporanExcel} from './ekspor-gudang.js?v=akses-ekspor-20261109';
 
 export async function halamanDashboard(wadah) {
   if(P.mandor())return dashboardMandor(wadah);
