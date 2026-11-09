@@ -14,7 +14,7 @@ function sheet(nama,judul,kolom,rows,meta){
    merges:[`A1:${last}1`,`A2:${last}2`,`A3:${last}3`],baris:[[S.judul(judul)],[S.kecil(meta)],[S.catatan('Nilai kosong berarti tidak tercatat atau belum dapat dihitung.')],headers,...body]};
 }
 export function siapkanLaporan({dari='',sampai=''}={}){
- if(!P.admin())throw Error('Laporan lengkap hanya tersedia untuk admin.');
+ if(!P.punya('ekspor'))throw Error('Anda tidak memiliki hak unduh laporan Excel lengkap.');
  if(dari&&sampai&&dari>sampai)throw Error('Tanggal awal melebihi tanggal akhir.');
  const data=D.state.data, meta=`Dibuat ${new Date().toLocaleString('id-ID')} · revisi ${data.rev} · periode ${dari||'awal'} s.d. ${sampai||'akhir'} · ${D.state.belumDisimpan?'ada perubahan belum tersimpan':'data tersimpan'}`;
  const masuk=pisahBbm(D.baris('material_masuk').filter(x=>inRange(x,dari,sampai)));
@@ -30,8 +30,8 @@ export function siapkanLaporan({dari='',sampai=''}={}){
  return [sheet('Stok','STOK GUDANG SAAT INI',stocks,D.laporanStok(),meta+' · stok tidak dibatasi periode'),sheet('Material Masuk','MATERIAL MASUK',ins,masuk.material,meta),sheet('Material Keluar','MATERIAL KELUAR',outs,keluar.material,meta),sheet('BBM Masuk','BBM MASUK',ins,masuk.bbm,meta),sheet('BBM Keluar','BBM KELUAR',outs,keluar.bbm,meta),sheet('SPPB Item','SPPB PER ITEM',items,p.item,meta),sheet('Order','ORDER PER PEMESANAN',orders,p.order,meta),sheet('Penerimaan Order','PENERIMAAN ORDER',receipts,p.penerimaan,meta)];
 }
 export function tombolLaporanExcel(){
- if(!P.admin())return null;
+ if(!P.punya('ekspor'))return null;
  const dari=el('input',{type:'date'}),sampai=el('input',{type:'date'});
  const tombol=el('button.tombol-samar',{type:'button',teks:'Unduh Excel laporan Gudang',onclick:async()=>{try{tombol.disabled=true;await unduhXlsx('Laporan-Gudang.xlsx',siapkanLaporan({dari:dari.value,sampai:sampai.value}));}catch(e){pesan(e.message,'galat',8);}finally{tombol.disabled=false;}}});
- return el('div.lembar',{style:'margin:1rem 0;padding:1rem'},[el('h2',{teks:'Unduh laporan Excel'}),el('p.bantuan',{teks:'Periode menyaring tanggal transaksi dan tanggal SPPB; order dan penerimaan mengikuti SPPB yang dipilih. Stok menunjukkan posisi saat ini. Kosongkan periode untuk seluruh data termasuk tanpa tanggal. Hanya admin dapat mengunduh laporan lengkap.'}),isian('Dari tanggal',dari),isian('Sampai tanggal',sampai),tombol]);
+ return el('div.lembar',{style:'margin:1rem 0;padding:1rem'},[el('h2',{teks:'Unduh laporan Excel'}),el('p.bantuan',{teks:'Periode menyaring tanggal transaksi dan tanggal SPPB; order dan penerimaan mengikuti SPPB yang dipilih. Stok menunjukkan posisi saat ini. Kosongkan periode untuk seluruh data termasuk tanpa tanggal. Tersedia untuk pengguna yang memiliki hak unduh laporan.'}),isian('Dari tanggal',dari),isian('Sampai tanggal',sampai),tombol]);
 }

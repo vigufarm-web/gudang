@@ -7,6 +7,7 @@ export const HAK = [
   ['batal', 'Batalkan persetujuan'], ['order', 'Ceklis order kantor pusat'],
   ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'], ['bbm','Akses BBM masuk dan keluar'],
   ['laporan','Buat dan salin Laporan WA'],
+  ['ekspor','Unduh Excel laporan Gudang lengkap'],
 ];
 export const mandor=p=>!!p&&!p.admin&&(p.peran==='mandor'||(p.hak?.minta===true&&!['sppb','input','revisi','kepala','ktu','gudang','order','opname','bbm'].some(k=>p.hak?.[k])));
 export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || ((!mandor(p)||hak==='minta')&&p.hak?.[hak] === true));
