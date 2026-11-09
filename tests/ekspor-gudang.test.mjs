@@ -12,5 +12,5 @@ test('hasil XLSX memuat delapan sheet dengan pemisahan BBM dan stok',async()=>{
  assert.equal(sheets[1].baris.length,4);assert.equal(sheets[3].baris.length,5);
  const bytes=await buatXlsx(sheets);assert.ok(bytes.length>1000);
 });
-test('laporan lengkap tidak dapat dibuat pengguna non-admin',()=>{setup(false);assert.throws(()=>siapkanLaporan(),/hanya tersedia untuk admin/)});
+test('laporan lengkap memerlukan hak ekspor bagi pengguna non-admin',()=>{setup(false);assert.throws(()=>siapkanLaporan(),/tidak memiliki hak/);D.state.data.web.pengguna.u.hak={ekspor:true};assert.equal(siapkanLaporan().length,8);D.state.data.web.pengguna.u.aktif=false;assert.throws(()=>siapkanLaporan(),/tidak memiliki hak/)});
 test('tanggal yang terbalik ditolak',()=>{setup();assert.throws(()=>siapkanLaporan({dari:'2026-11-30',sampai:'2026-11-01'}),/Tanggal awal/)});
