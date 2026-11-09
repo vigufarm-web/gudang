@@ -5,7 +5,7 @@ import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import {formTerimaOrder,formRetur} from './pengadaan-ui.js?v=8';
 import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
-import { bisaEdit, spandukLokal } from './main.js?v=8';
+import { bisaEdit, spandukLokal, simpanSekarang } from './main.js?v=8';
 import {
   rapikan, kecil, inputMaster, inputTanggal, inputAngka, namaFinal,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
@@ -75,12 +75,15 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
     if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
     if (barisLama) D.ubah('material_masuk', barisLama.id, nilai);
     else D.tambah('material_masuk', nilai);
-    pesan(barisLama ? 'Perubahan dicatat.' : 'Material masuk dicatat.', 'sukses');
     p.tutup();
     saatSelesai();
+    const sedang=pesan('Menyimpan ke GitHub…','info',30);
+    const ok=await simpanSekarang('Web: simpan material / BBM masuk',{senyap:true});sedang.remove();
+    if(ok&&!D.modeLokal())pesan('Tersimpan ke GitHub.','sukses');
+    else if(!ok)pesan('Belum tersimpan ke GitHub. Jangan tutup halaman; periksa pesan kesalahan dan coba Simpan.','awas',12);
   };
 
-  const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick: simpan })];
+  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}finally{sibuk=false;b.disabled=false;}} })];
   if (barisLama) {
     if(P.admin())aksi.push(el('button.tombol-samar',{type:'button',teks:'Retur ke supplier',onclick:()=>formRetur(barisLama,()=>{p.tutup();saatSelesai();})}));
     aksi.unshift(el('button.tombol-bahaya', {

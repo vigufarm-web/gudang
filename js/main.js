@@ -66,16 +66,20 @@ export const autoSimpanAktif = () => localStorage.getItem(KUNCI_AUTOSIMPAN) !== 
 export const setAutoSimpan = (aktif) => localStorage.setItem(KUNCI_AUTOSIMPAN, aktif ? '1' : '0');
 let timerAutoSimpan = null;
 let sedangAutoSimpan = false;
-D.saatBerubah(() => {
-  perbaruiKepalaStatus();
-  if (!autoSimpanAktif() || D.modeLokal() || !bisaEdit()) return;
+function jadwalkanAutoSimpan(delay = 8000) {
   clearTimeout(timerAutoSimpan);
   timerAutoSimpan = setTimeout(async () => {
-    if (sedangAutoSimpan || D.state.gisSaving || !D.state.belumDisimpan) return;
+    if (!autoSimpanAktif() || D.modeLokal() || !bisaEdit() || !D.state.belumDisimpan) return;
+    if (sedangAutoSimpan || D.state.gisSaving) { jadwalkanAutoSimpan(1500); return; }
     sedangAutoSimpan = true;
     try { await simpanSekarang('Web: simpan otomatis', { senyap: true }); }
     finally { sedangAutoSimpan = false; }
-  }, 8000);
+  }, delay);
+}
+D.saatBerubah(() => {
+  perbaruiKepalaStatus();
+  if (!autoSimpanAktif() || D.modeLokal() || !bisaEdit()) return;
+  jadwalkanAutoSimpan();
 });
 
 export async function simpanSekarang(judul = 'Web: simpan perubahan', { senyap = false } = {}) {
@@ -90,9 +94,11 @@ export async function simpanSekarang(judul = 'Web: simpan perubahan', { senyap =
       pesan('Perubahan orang lain masuk duluan — sudah digabung dan tersimpan.', 'sukses', 6);
     }
     gambarKepalaSaja();
+    return !D.state.belumDisimpan;
   } catch (e) {
     pesan(e.message, 'galat', 8);
     gambarKepalaSaja();
+    return false;
   }
 }
 
@@ -205,7 +211,13 @@ function rute() {
 async function bangunKerangka() {
   await P.masuk(akar);
   const draf = await D.drafTersimpan();
-  if (draf) {
+  if (draf?.terlambat) {
+    const unduh=await tanya('Draf lama perlu diperiksa',el('div',{},[
+      el('p',{teks:'Ada draf yang belum terkirim, tetapi data GitHub sudah lebih baru. Draf tidak diterapkan otomatis agar tidak menimpa perubahan orang lain.'}),
+      el('p',{teks:draf.diarsipkan?'Draf terenkripsi telah disimpan di perangkat ini. Unduh salinannya agar admin dapat membantu memeriksa.':'Penyimpanan perangkat penuh atau diblokir. Draf asli dipertahankan; unduh salinannya dan jangan hapus data browser.'}),
+    ]),{ya:'Unduh draf',tidak:'Nanti'});
+    if(unduh)D.unduhDrafLama(draf);
+  } else if (draf) {
     const pulih = await tanya('Ada input yang belum tersimpan', el('div', {}, [
       el('p', { teks: `Perubahan terakhir ${waktu(draf.waktu)} belum sempat terkirim `
         + '(mis. listrik padam atau tab tertutup). Pulihkan dan lanjutkan dari situ?' }),
@@ -215,6 +227,7 @@ async function bangunKerangka() {
     else D.hapusDraf();
   }
   if (!P.siapa()) await P.masuk(akar);
+  import('./gis-panel.js?v=gis-pages-3').then(m=>m.startGISAuto({D,app:'gudang',isAdmin:P.admin,canEdit:bisaEdit,markChanged:D.tandaiBerubah,save:D.simpanGIS})).catch(()=>{});
   elSisi = el('nav.sisi', { 'aria-label': 'Menu utama' });
   elKepala = el('header.kepala');
   elIsi = el('div.isi', { id: 'isi' });

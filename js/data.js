@@ -731,7 +731,6 @@ export async function muat(password) {
   state.belumDisimpan = false;
   state.dasarJson = JSON.stringify(data);
   gh.setTokenBersama(data.web?.token || '');
-  import('./gis-panel.js?v=gis-pages-3').then(m=>m.startGISAuto({D:{state},app:'gudang',isAdmin:P.admin,canEdit:()=>!!gh.ambilToken(),markChanged:tandaiBerubah,save:simpanGIS})).catch(()=>{});
   return data;
 }
 
@@ -976,20 +975,30 @@ export function gabungTiga(dasar, lokal, remote) {
 // ---------------------------------------------------------------------
 const kunciDraf = () => `gudang.draf.${state.path}.${P.siapa()?.id || 'anonim'}`;
 let timerDraf = null;
+let lindungiDrafLama = false;
+let generasiDraf = 0;
 function jadwalkanDraf() {
-  if (!state.password || !state.data) return;
+  if (!state.password || !state.data || lindungiDrafLama) return;
   clearTimeout(timerDraf);
+  const generasi=++generasiDraf, data=state.data, path=state.path, pemilik=P.siapa()?.id;
   timerDraf = setTimeout(async () => {
     try {
-      const amp = await kunciAmplop(state.data, state.password, { draf: true });
+      // A save in flight temporarily increments data.rev. A draft must refer
+      // to the last confirmed GitHub baseline, not that unconfirmed revision.
+      const rev=state.dasarJson ? Number(JSON.parse(state.dasarJson).rev)||0 : Number(data.rev)||0;
+      const snapshot=structuredClone(data);snapshot.rev=rev;
+      const amp = await kunciAmplop(snapshot, state.password, { draf: true });
+      if(generasi!==generasiDraf || !state.belumDisimpan || state.data!==data || state.path!==path || P.siapa()?.id!==pemilik)return;
       localStorage.setItem(kunciDraf(), JSON.stringify({
-        rev: Number(state.data.rev) || 0, waktu: new Date().toISOString(), amp }));
+        rev, waktu: new Date().toISOString(), amp }));
     } catch { /* penyimpanan penuh / terblokir — lewati saja */ }
   }, 2500);
 }
 
 export function hapusDraf() {
   clearTimeout(timerDraf);
+  generasiDraf++;
+  if(lindungiDrafLama)return;
   try { localStorage.removeItem(kunciDraf()); } catch { /* abaikan */ }
 }
 
@@ -999,12 +1008,23 @@ export async function drafTersimpan() {
     if (!mentah || !state.data) return null;
     const { rev, waktu, amp } = JSON.parse(mentah);
     if (Number(rev) !== (Number(state.data.rev) || 0)) {
-      localStorage.removeItem(kunciDraf());
-      return null;
+      // A different user may have saved while this device was closed.  Never
+      // apply an old whole-dataset snapshot over their newer data, and never
+      // delete the only local copy. Keep an encrypted archive for review.
+      const arsip=`${kunciDraf()}.arsip.${Number(rev)||0}.${Date.now()}`;
+      let diarsipkan=false;
+      try {localStorage.setItem(arsip,mentah);diarsipkan=localStorage.getItem(arsip)===mentah;if(diarsipkan)localStorage.removeItem(kunciDraf());} catch { /* keep original intact */ }
+      lindungiDrafLama=!diarsipkan;
+      return {waktu,terlambat:true,diarsipkan,mentah};
     }
     const isi = await bukaAmplop(amp, state.password);
     return { waktu, data: isi };
   } catch { return null; }
+}
+
+export function unduhDrafLama(draf) {
+  if(!draf?.terlambat||!draf.mentah)throw Error('Draf terenkripsi tidak tersedia.');
+  unduhTeks('draf-gudang-terenkripsi.json',draf.mentah,'application/json');
 }
 
 export function pakaiDraf(draf) {
