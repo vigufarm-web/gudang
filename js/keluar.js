@@ -8,7 +8,7 @@ import {pilihanUnitBbm} from './bbm.js?v=8';
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import { el, kosongkan, taruh, pesan, tanya, mintaTeks, panel, isian, tabel, angka, tanggal, kesalahan } from './ui.js?v=8';
-import { bisaEdit, spandukLokal } from './main.js?v=8';
+import { bisaEdit, spandukLokal, simpanSekarang } from './main.js?v=8';
 import {
   rapikan, inputMaster, inputTanggal, inputAngka, namaFinal, kanonikRiwayat,
   filterPeriode, saring, urutTanggalTurun, BATAS_TAMPIL, catatanBatas,
@@ -92,9 +92,12 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
       if(blokBbm.mode()==='kosong')D.tambah('material_keluar',{...nilai,blok:''});
       else{const batch=crypto.randomUUID();D.tambahBatchKeluar(parts.map(r=>({...nilai,...r,batch_id:batch,mode_pembagian:blokBbm.mode()})));}
     }else D.tambah('material_keluar', nilai);
-    pesan(barisLama ? 'Perubahan dicatat.' : 'Material keluar dicatat.', 'sukses');
     p.tutup();
     saatSelesai();
+    const sedang=pesan('Menyimpan ke GitHub…','info',30);
+    const ok=await simpanSekarang('Web: simpan material / BBM keluar',{senyap:true});sedang.remove();
+    if(ok&&!D.modeLokal())pesan('Tersimpan ke GitHub.','sukses');
+    else if(!ok)pesan('Belum tersimpan ke GitHub. Jangan tutup halaman; periksa pesan kesalahan dan coba Simpan.','awas',12);
   };
 
   let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}finally{sibuk=false;b.disabled=false;}} })];
