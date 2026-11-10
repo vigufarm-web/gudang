@@ -11,7 +11,7 @@ import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
 import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
 import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=20261106';
-import {simpanSppbBaru} from './sppb-baru.js?v=20261110';
+import {simpanSppbBaru} from './sppb-baru.js?v=master-20261110';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''

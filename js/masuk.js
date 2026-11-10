@@ -56,7 +56,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       tanggal: kTanggal.value,
       // anti-dobel: ejaan mengikuti master; nama baru yang mirip ditanyakan dulu
       material: await namaFinal('master_material', kMaterial.value, 'Material'),
-      satuan: D.normalkanSatuan(kSatuan.value),
+      satuan: P.admin() ? D.normalkanSatuan(kSatuan.value) : (D.masterDenganNama('master_satuan', kSatuan.value)?.nama || rapikan(kSatuan.value)),
       qty: Number(kQty.value),
       divisi: barisLama?.divisi||'Gudang',
       sumber: rapikan(kSumber.value),
@@ -68,6 +68,8 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
     if (!nilai.material) galat.push('Material wajib diisi.');
     if(!bbm&&adalahBbm(nilai))galat.push('Catat transaksi BBM melalui menu BBM Masuk.');
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
+    if (!P.admin() && nilai.material && !D.masterDenganNama('master_material', nilai.material)) galat.push('Material belum ada di Master Material. Minta admin menambahkannya sebelum mencatat penerimaan manual, atau terima melalui order SPPB.');
+    if (!P.admin() && nilai.satuan && !D.masterDenganNama('master_satuan', nilai.satuan)) galat.push('Satuan belum ada di Master Satuan. Minta admin menambahkannya sebelum mencatat penerimaan manual, atau terima melalui order SPPB.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_masuk',barisLama,{...barisLama,...nilai});
@@ -107,7 +109,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       isian('Tanggal *', kTanggal),
       isian(bbm?'Jumlah liter *':'Qty *', kQty),
     ]),
-    isian(bbm?'Jenis BBM *':'Material *', kMaterial, { bantuan: bbm?'Solar, Pertalite dan Pertamax dicatat terpisah dalam liter.':'Nama baru otomatis masuk ke Master Material.' }),
+    isian(bbm?'Jenis BBM *':'Material *', kMaterial, { bantuan: bbm?'Solar, Pertalite dan Pertamax dicatat terpisah dalam liter.':P.admin()?'Nama baru otomatis masuk ke Master Material.':'Penerimaan manual memakai material dan satuan yang sudah ada di master.' }),
     el('div.baris-isian', {}, [
       isian('Satuan', kSatuan),
       isian('Lokasi stok', kDivisi),
