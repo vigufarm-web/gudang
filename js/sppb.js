@@ -11,6 +11,7 @@ import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
 import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
 import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=20261106';
+import {simpanSppbBaru} from './sppb-baru.js?v=20261110';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -62,7 +63,7 @@ function barisItem(item = {}) {
     wadah,
     ambil: () => ({
       material: rapikan(kMaterial.value),
-      satuan: D.normalkanSatuan(kSatuan.value),
+      satuan: D.masterDenganNama('master_satuan', kSatuan.value)?.nama || rapikan(kSatuan.value),
       qty_diminta: Number(kQty.value),
       brand: rapikan(kBrand.value),
       keterangan: rapikan(kKet.value),
@@ -88,6 +89,7 @@ export function formSppbBaru(saatSelesai,referensi=null) {
   gambarItem();
 
   const simpan = async () => {
+    try {
     const no = rapikan(kNo.value);
     const items = daftarItem.filter((it) => !it.kosong()).map((it) => it.ambil());
     // anti-dobel: nama material tiap item disamakan dengan master / ditanyakan
@@ -108,17 +110,18 @@ export function formSppbBaru(saatSelesai,referensi=null) {
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
 
     const divisi = await namaFinal('master_divisi', kDivisi.value, 'Divisi');
-    if (divisi) D.pastikanMaster('master_divisi', divisi);
-    for (const it of items) D.pastikanMaster('master_material',it.material,{satuan_default:it.satuan});
-    const pembuat = P.siapa();
-    const s = D.tambah('sppb', { no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value), dibuat_oleh: pembuat?.nama || '', dibuat_oleh_id: pembuat?.id || null, dibuat_ttd_versi: D.web().ttdPengguna?.[pembuat?.id]?.versi || null, ...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) });
-    for (const it of items) {
-      D.pastikanMaster('master_material', it.material, { satuan_default: it.satuan });
-      D.tambah('sppb_items', { sppb_id: s.id, ...it });
+    if (!D.masterDenganNama('master_divisi', divisi) || !P.cakupan(divisi)) {
+      tempatGalat.append(kesalahan(['Pilih divisi yang tersedia dan sesuai hak akses Anda.']));
+      return;
     }
+    simpanSppbBaru({ no_sppb: no, tanggal: kTanggal.value, divisi_pemohon: divisi, keterangan: rapikan(kKet.value), ...(referensi?{permintaan_id:referensi.id,no_permintaan:referensi.nomor}:{}) }, items);
     pesan(`SPPB ${no} dibuat dengan ${items.length} item.`, 'sukses');
     p.tutup();
     saatSelesai();
+    } catch (error) {
+      kosongkan(tempatGalat);
+      tempatGalat.append(kesalahan([error.message || 'SPPB belum dapat disimpan.']));
+    }
   };
 
   const p = panel('Buat SPPB baru', el('div', {}, [
