@@ -1,6 +1,7 @@
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import * as B from './pengadaan-model.js?v=8';
+import {biayaFifo} from './harga-order-model.js';
 import {pisahBbm,susunLaporanPengadaan} from './ekspor-gudang-model.js?v=status-order-20261106';
 import {S,GAYA,kolomHuruf,unduhXlsx} from './xlsx-tulis.js';
 import {el,isian,pesan} from './ui.js?v=8';
@@ -27,7 +28,16 @@ export function siapkanLaporan({dari='',sampai=''}={}){
  const items=[c('No. SPPB','nomor',20),c('Tanggal SPPB','tanggal',16),c('Divisi','divisi',18),c('Persetujuan','status_acc',20),c('Material','material',30),c('Satuan','satuan',14),c('Diminta','diminta',15),c('Diterima bersih','diterima',18),c('Menunggu datang','menunggu',18),c('Belum dipesan','belum_dipesan',18),c('Status order','status_order',34),c('Status penerimaan','status_item',20),['Dibatalkan',r=>r.dibatalkan?'Ya':'Tidak',14],c('Catatan','catatan',35)];
  const orders=[c('SPPB','sppb',20),c('No. order','nomor',22),c('Tanggal order','tanggal',16),c('Supplier','supplier',26),c('Material','material',30),c('Jumlah order','jumlah',16),c('Satuan order','satuan_order',16),c('Faktor konversi','faktor',18),c('Satuan SPPB','satuan_sppb',16),c('Total setara SPPB','total_sppb',20),c('Diterima','diterima',15),c('Menunggu','menunggu',15),['Ditutup',r=>r.ditutup?'Ya':'Tidak',14],c('Perkiraan tiba','perkiraan',18),c('Sumber konversi','konversi',25)];
  const receipts=[c('SPPB','sppb',20),c('No. order','order',20),c('Tanggal','tanggal',15),c('Material','material',30),c('Jumlah','jumlah',15),c('Satuan','satuan',14),c('Retur','retur',15),c('Bersih','bersih',15),c('Diterima satuan SPPB','jumlah_sppb',22),c('Satuan SPPB','satuan_sppb',16),c('Lokasi penerimaan','lokasi',20),c('Tujuan','tujuan',20)];
- return [sheet('Stok','STOK GUDANG SAAT INI',stocks,D.laporanStok(),meta+' · stok tidak dibatasi periode'),sheet('Material Masuk','MATERIAL MASUK',ins,masuk.material,meta),sheet('Material Keluar','MATERIAL KELUAR',outs,keluar.material,meta),sheet('BBM Masuk','BBM MASUK',ins,masuk.bbm,meta),sheet('BBM Keluar','BBM KELUAR',outs,keluar.bbm,meta),sheet('SPPB Item','SPPB PER ITEM',items,p.item,meta),sheet('Order','ORDER PER PEMESANAN',orders,p.order,meta),sheet('Penerimaan Order','PENERIMAAN ORDER',receipts,p.penerimaan,meta)];
+ const biayaSheets=[];
+ if(P.admin()){
+  const rincian=biayaFifo(data,B.norm,B.unit).filter(x=>inRange(x.baris,dari,sampai));
+  const kelompok=new Map();
+  for(const x of rincian){const blok=x.baris.blok||'Tanpa blok';const k=B.norm(blok);const t=kelompok.get(k)||{blok,nilai:0,diketahui:0,belum:0};if(x.nilai!=null&&x.qtyBelum<Number(x.baris.qty)){t.nilai+=x.nilai;t.diketahui++;}if(x.qtyBelum>0)t.belum++;kelompok.set(k,t);}
+  const ringkas=[c('Blok','blok',20),['Biaya teridentifikasi (Rp)',r=>r.diketahui?r.nilai:null,25],['Status',r=>r.belum?`${r.belum} transaksi belum lengkap`:'Lengkap',35]];
+  const detail=[['Tanggal',x=>x.baris.tanggal,15],['Blok',x=>x.baris.blok||'Tanpa blok',20],['Material',x=>x.baris.material,30],['Jumlah',x=>x.baris.qty,15],['Satuan',x=>x.baris.satuan,15],['Biaya teridentifikasi (Rp)',x=>x.nilai!=null&&x.qtyBelum<Number(x.baris.qty)?x.nilai:null,25],['Jumlah tanpa biaya',x=>x.qtyBelum,20],['Keterangan',x=>x.alasan||'Lengkap',55]];
+  biayaSheets.push(sheet('Biaya per Blok','BIAYA MATERIAL KELUAR PER BLOK - FIFO',ringkas,[...kelompok.values()],meta),sheet('Rincian Biaya','RINCIAN BIAYA MATERIAL - FIFO',detail,rincian,meta));
+ }
+ return [sheet('Stok','STOK GUDANG SAAT INI',stocks,D.laporanStok(),meta+' · stok tidak dibatasi periode'),sheet('Material Masuk','MATERIAL MASUK',ins,masuk.material,meta),sheet('Material Keluar','MATERIAL KELUAR',outs,keluar.material,meta),sheet('BBM Masuk','BBM MASUK',ins,masuk.bbm,meta),sheet('BBM Keluar','BBM KELUAR',outs,keluar.bbm,meta),sheet('SPPB Item','SPPB PER ITEM',items,p.item,meta),sheet('Order','ORDER PER PEMESANAN',orders,p.order,meta),sheet('Penerimaan Order','PENERIMAAN ORDER',receipts,p.penerimaan,meta),...biayaSheets];
 }
 export function tombolLaporanExcel(){
  if(!P.punya('ekspor'))return null;

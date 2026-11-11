@@ -1,7 +1,7 @@
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import * as B from './pengadaan-model.js?v=8';
-import {hitungHargaOrder,biayaFifo} from './harga-order-model.js';
+import {hitungHargaOrder} from './harga-order-model.js';
 import {el,kosongkan,taruh,isian,tabel,panel,pesan,mintaTeks,hariIni,angka,tanggal} from './ui.js?v=8';
 import {bisaEdit,simpanSekarang} from './main.js?v=8';
 const jml=v=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:3}).format(Number(v)||0);
@@ -122,16 +122,6 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
     const legacy=Object.entries(D.web().orderItem||{}).filter(([id])=>!D.daftarOrder().some(o=>Number(o.sppb_item_id)===Number(id)));
     if(legacy.length)konten.append(el('p.petunjuk',{teks:`${legacy.length} ceklis order lama belum memiliki rincian jumlah. Tidak dianggap seluruh kebutuhan telah dipesan; lengkapi melalui Tambah order.`}));
     if(!ditunggu){
-      if(P.admin()||P.punya('order')){
-        const rincian=biayaFifo(D.state.data,B.norm,B.unit);
-        const perBlok=new Map();for(const x of rincian){const nama=x.baris.blok||'Tanpa blok';const p=perBlok.get(nama)||{blok:nama,nilai:0,belum:0,diketahui:0};if(x.nilai!=null&&x.qtyBelum<Number(x.baris.qty)){p.nilai+=x.nilai;p.diketahui++;}if(x.qtyBelum>0)p.belum++;perBlok.set(nama,p);}
-        konten.append(el('div.lembar',{style:'margin-top:1rem'},[el('div.lembar-isi',{},[
-          el('h2',{teks:'Biaya material keluar per blok · FIFO'}),
-          el('p.bantuan',{teks:'Berdasarkan penerimaan terawal dan jumlah material setiap blok. Nilai dihitung ulang bila harga atau riwayat dikoreksi. Data tanpa harga dan urutan yang belum pasti perlu diperiksa; nilai belum lengkap bukan biaya akhir.'}),
-          tabel([{l:'Blok',k:'blok'},{l:'Biaya teridentifikasi',nilai:r=>r.diketahui?`Rp ${jml(r.nilai)}`:'Belum tersedia'},{l:'Status',nilai:r=>r.belum?`${r.belum} transaksi belum lengkap`:'Lengkap'}],[...perBlok.values()],{kosong:'Belum ada pengeluaran material.'}),
-          el('h3',{teks:'Rincian pengeluaran terbaru'}),el('p.bantuan',{teks:`Menampilkan maksimal 100 transaksi terbaru sesuai pencarian material/blok di atas; ringkasan tetap memakai semua ${rincian.length} transaksi.`}),tabel([{l:'Tanggal',nilai:x=>tanggal(x.baris.tanggal)},{l:'Blok',nilai:x=>x.baris.blok||'Tanpa blok'},{l:'Material',nilai:x=>x.baris.material},{l:'Jumlah',nilai:x=>`${jml(x.baris.qty)} ${x.baris.satuan}`},{l:'Biaya teridentifikasi',nilai:x=>x.nilai==null||x.qtyBelum>=Number(x.baris.qty)?'Belum tersedia':`Rp ${jml(x.nilai)}`},{l:'Keterangan',nilai:x=>x.alasan||'Lengkap'}],[...rincian].filter(x=>!cari||B.norm(`${x.baris.material} ${x.baris.blok||''}`).includes(cari)).sort((a,b)=>String(b.baris.tanggal||'').localeCompare(String(a.baris.tanggal||''))).slice(0,100),{kosong:'Belum ada pengeluaran material yang cocok.'})
-        ])]));
-      }
       const items=D.laporanSppb().filter(s=>D.statusAcc(s.id)===D.STATUS_ACC.FULL).flatMap(s=>s.items.filter(it=>!it.batal).map(it=>({...it,no:s.no_sppb,divisi:s.divisi_pemohon,s:D.ringkasPengadaan(it)})))
         .filter(it=>!cari||B.norm([it.no,it.material,it.divisi].join(' ')).includes(cari));
       konten.append(el('div.lembar',{style:'margin-top:1rem'},[el('div.lembar-isi',{},[
