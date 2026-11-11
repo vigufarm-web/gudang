@@ -2,6 +2,7 @@ import {finishSavedSnapshot} from './save-state.js';
 import {rebaseGISOnly,gisOnlyChanges,assertGISMerge,captureGISSnapshot,assertGISMasterEdit,assertGISBlockActive,assertGISMasterStructure} from './gis-model.js?v=gis-pages-3';
 import * as W from './workflow.js?v=8';
 import {jenisBbm} from './bbm-model.js?v=8';
+import {hitungHargaOrder} from './harga-order-model.js';
 // data.js — isi database gudang dipegang di memori, dibaca & disimpan ke repo GitHub.
 //
 // Satu file data = seluruh isi gudang.db aplikasi desktop, dikemas jadi satu
@@ -443,6 +444,14 @@ export function ubahPesanan(id,raw) {
   const baru=B.susunOrder(state.data,{...o,...raw,nomor:o.nomor,sppb_item_id:o.sppb_item_id},id);
   web().pesanan[id]=baru;catatMutasi('Koreksi order','pesanan',id,{sebelum:o,sesudah:baru});tandaiBerubah();
 }
+export function ubahHargaPesanan(id,harga) {
+  const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');P.jagaOrder(o.sppb_item_id);
+  const nilai=harga.harga_total_barang;
+  if(nilai!=null&&(!Number.isFinite(nilai)||nilai<0))throw Error('Harga tidak valid.');
+  if(!['termasuk','terpisah','belum_diketahui'].includes(harga.ongkir_status))throw Error('Status ongkir tidak valid.');
+  if(harga.ongkir_status==='terpisah'&&(!Number.isFinite(harga.ongkir)||harga.ongkir<0))throw Error('Ongkir tidak valid.');
+  const baru={...o,...harga};web().pesanan[id]=baru;catatMutasi('Koreksi harga order','pesanan',id,{sebelum:o,sesudah:baru});tandaiBerubah();
+}
 export function tutupSisaOrder(id,alasan) {
   const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');P.jagaOrder(o.sppb_item_id);
   if(o.ditutup)throw Error('Sisa order sudah ditutup.');
@@ -787,6 +796,7 @@ async function saveInternal(pesan,{gisOnly=false}={}) {
     W.validasiSimpanWorkflow(basis);
     for(const o of daftarOrder()){
       const r=B.ringkasOrder(state.data,o),lama=basis.web?.pesanan?.[o.id];
+      if(o.harga_nilai!=null){const hitung=hitungHargaOrder({jumlah:o.qty_order,cara:o.harga_cara,nilai:o.harga_nilai});if(o.harga_total_barang==null||Math.abs(hitung.totalBarang-o.harga_total_barang)>0.001)throw Error('Jumlah atau harga order berubah bersamaan. Muat ulang dan periksa kembali harga sebelum menyimpan.');}
       if(lama&&r.masuk.length&&['qty_order','satuan_order','satuan_sppb','satuan_stok','faktor_order','faktor_stok'].some(k=>o[k]!==lama[k]))throw Error('Ada penerimaan pada order ini. Konversi/jumlah asal tidak boleh ditimpa; muat ulang data.');
       if(o.ditutup&&r.total!=null&&r.batal>0&&r.batal+r.diterima>r.total+1e-7)throw Error('Penerimaan bersamaan mengubah sisa yang ditutup. Muat ulang lalu perbarui penutupan sisa.');
     }

@@ -1,6 +1,7 @@
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import * as B from './pengadaan-model.js?v=8';
+import {hitungHargaOrder,biayaFifo} from './harga-order-model.js';
 import {el,kosongkan,taruh,isian,tabel,panel,pesan,mintaTeks,hariIni,angka,tanggal} from './ui.js?v=8';
 import {bisaEdit,simpanSekarang} from './main.js?v=8';
 const jml=v=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:3}).format(Number(v)||0);
@@ -10,13 +11,20 @@ const simpan=async(judul)=>{await simpanSekarang(judul);if(D.state.belumDisimpan
 const bolehOrder=it=>bisaEdit()&&P.punya('order')&&P.cakupan(D.cari('sppb',it.sppb_id)?.divisi_pemohon);
 const bolehTerima=()=>bisaEdit()&&(P.admin()||P.punya('gudang'))&&P.punya('input');
 
-export function formOrder(it,selesai,o=null) {
+export function formOrder(it,selesai,o=null,hargaSaja=false) {
   if(!bolehOrder(it))throw Error('Tidak memiliki hak order pada divisi ini.');
   const supplier=f('supplier',o?.supplier||''),tgl=f('',o?.tanggal||hariIni(),'date'),eta=f('',o?.eta||'','date');
   const qty=f('',o?.qty_order||'','number'),sat=f('',o?.satuan_order||it.satuan);
   const faktor=f('',o?.faktor_order??1,'number'),stokUnit=D.satuanBawaan(it.material)||it.satuan;
   const faktorStok=f('',o?.faktor_stok??(B.samaUnit(stokUnit,it.satuan)?1:''),'number');
   const sumber=f('',o?.sumber_konversi||''),lebih=f('',o?.alasan_lebih||'');
+  const cara=el('select',{},[el('option',{value:'satuan',teks:'Harga per satuan order'}),el('option',{value:'total',teks:'Harga total barang'})]);
+  cara.value=o?.harga_cara||'satuan';
+  const harga=f('',o?.harga_nilai??'','number'),ongkir=f('',o?.ongkir??'','number'),ketHarga=f('',o?.keterangan_harga||'');
+  const statusOngkir=el('select',{},[el('option',{value:'belum_diketahui',teks:'Belum diketahui'}),el('option',{value:'termasuk',teks:'Sudah termasuk harga'}),el('option',{value:'terpisah',teks:'Dicatat terpisah'})]);statusOngkir.value=o?.ongkir_status||'belum_diketahui';
+  const infoHarga=el('p.petunjuk');
+  const updateHarga=()=>{try{const h=hitungHargaOrder({jumlah:qty.value,cara:cara.value,nilai:harga.value});infoHarga.textContent=h.totalBarang==null?'Harga belum tersedia':`Harga satuan Rp ${jml(h.hargaSatuan)} · total barang Rp ${jml(h.totalBarang)}`;}catch(e){infoHarga.textContent=e.message;}};
+  for(const inp of [qty,cara,harga])inp.addEventListener('input',updateHarga);
   const jenis=B.norm(it.material)==='bbm'?el('select',{},[el('option',{value:'',teks:'Pilih jenis BBM…'}),...['Pertalite','Pertamax','Solar'].map(n=>el('option',{value:n,teks:n}))]):null;
   if(jenis)jenis.value=['Pertalite','Pertamax','Solar'].find(n=>B.norm(n)===B.norm(o?.material))||'';
   const density=f('','','number'),info=el('p.petunjuk'),galat=el('div',{role:'alert'});
@@ -28,8 +36,10 @@ export function formOrder(it,selesai,o=null) {
     const a=konv(sat.value,it.satuan),b=konv(it.satuan,stokUnit);if(a)faktor.value=a;if(b)faktorStok.value=b;update();});
   const tombol=el('button.tombol-utama',{type:'submit',teks:'Simpan order'});let sibuk=false;
   const form=el('form',{onsubmit:async(e)=>{e.preventDefault();if(sibuk)return;sibuk=true;tombol.disabled=true;galat.textContent='';try{
-    const raw={sppb_item_id:it.id,material_stok:jenis?.value,supplier:supplier.value.trim(),tanggal:tgl.value,eta:eta.value,qty_order:qty.value,satuan_order:sat.value.trim(),faktor_order:faktor.value,faktor_stok:faktorStok.value,sumber_konversi:sumber.value.trim(),alasan_lebih:lebih.value.trim()};
-    if(o)D.ubahPesanan(o.id,raw);else D.tambahPesanan(raw);
+    const h=hitungHargaOrder({jumlah:qty.value,cara:cara.value,nilai:harga.value});
+    if(statusOngkir.value==='terpisah'&&(ongkir.value===''||Number(ongkir.value)<0))throw Error('Isi ongkir terpisah dengan angka nol atau lebih.');
+    const raw={sppb_item_id:it.id,material_stok:jenis?.value,supplier:supplier.value.trim(),tanggal:tgl.value,eta:eta.value,qty_order:qty.value,satuan_order:sat.value.trim(),faktor_order:faktor.value,faktor_stok:faktorStok.value,sumber_konversi:sumber.value.trim(),alasan_lebih:lebih.value.trim(),harga_cara:cara.value,harga_nilai:harga.value===''?null:Number(harga.value),harga_total_barang:h.totalBarang,ongkir_status:statusOngkir.value,ongkir:statusOngkir.value==='terpisah'?Number(ongkir.value):null,keterangan_harga:ketHarga.value.trim()};
+    if(hargaSaja)D.ubahHargaPesanan(o.id,{harga_cara:raw.harga_cara,harga_nilai:raw.harga_nilai,harga_total_barang:raw.harga_total_barang,ongkir_status:raw.ongkir_status,ongkir:raw.ongkir,keterangan_harga:raw.keterangan_harga});else if(o)D.ubahPesanan(o.id,raw);else D.tambahPesanan(raw);
     await simpan('Web: pemesanan bertahap');p.tutup();selesai();
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
     el('p',{teks:`SPPB ${D.cari('sppb',it.sppb_id)?.no_sppb} · ${it.material} · kebutuhan ${jml(it.qty_diminta,3)} ${it.satuan}`}),
@@ -41,8 +51,9 @@ export function formOrder(it,selesai,o=null) {
     !B.samaUnit(stokUnit,it.satuan)?isian(`1 ${it.satuan} berapa ${stokUnit} untuk stok?`,faktorStok):null,
     ['kg','liter'].includes(B.unit(it.satuan))?isian('Massa jenis kg/liter (opsional untuk kg ↔ liter)',density,{bantuan:'Isi hanya dari spesifikasi bahan yang diketahui, bukan anggapan 1 kg = 1 liter.'}):null,
     isian('Sumber konversi / massa jenis',sumber,{bantuan:'Misalnya isi label kemasan atau dokumen supplier. Disimpan pada order.'}),info,
+    isian('Cara mengisi harga',cara),isian('Harga (Rp)',harga),infoHarga,isian('Ongkir',statusOngkir),isian('Ongkir terpisah untuk item ini (Rp)',ongkir),isian('Keterangan harga',ketHarga),
     isian('Alasan pengecualian jika melebihi kebutuhan',lebih),galat,tombol,
-  ]);const p=panel(o?'Lengkapi / koreksi order':'Tambah order',form);update();
+  ]);if(hargaSaja){for(const i of [supplier,tgl,eta,qty,sat,faktor,faktorStok,sumber,lebih,density])i.disabled=true;if(jenis)jenis.disabled=true;form.prepend(el('p.petunjuk',{teks:'Koreksi harga menghitung ulang biaya FIFO pada laporan; riwayat sebelumnya dapat berubah.'}));}const p=panel(hargaSaja?'Koreksi harga':o?'Lengkapi / koreksi order':'Tambah order',form);update();updateHarga();
 }
 
 export function formTerimaOrder(o,selesai,lama=null) {
@@ -86,6 +97,7 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
     const aksi=o=>el('div',{style:'display:flex;gap:5px;flex-wrap:wrap'},[
       bolehTerima()&&!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>0)?el('button.tombol-kecil',{teks:'Terima barang',onclick:()=>formTerimaOrder(o,gambar)}):null,
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))&&!o.r.masuk.length&&!o.ditutup?el('button.tombol-kecil.tombol-samar',{teks:'Konversi / koreksi',onclick:()=>formOrder(D.cari('sppb_items',o.sppb_item_id),gambar,o)}):null,
+      bolehOrder(D.cari('sppb_items',o.sppb_item_id))?el('button.tombol-kecil.tombol-samar',{teks:'Harga',onclick:()=>formOrder(D.cari('sppb_items',o.sppb_item_id),gambar,o,true)}):null,
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))&&!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>0)?el('button.tombol-kecil.tombol-samar',{teks:'Tutup sisa',onclick:async()=>{const alasan=await mintaTeks('Tutup sisa order','Sisa yang dibatalkan tidak dianggap diterima.',{label:'Alasan',wajib:true});if(alasan!=null){D.tutupSisaOrder(o.id,alasan);await simpan('Web: tutup sisa order');gambar();}}}):null,
       el('button.tombol-kecil.tombol-samar',{teks:'Riwayat terima',onclick:()=>{
         const riwayatPanel=panel(`Penerimaan ${o.nomor}`,el('div',{},[
@@ -104,11 +116,22 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
         {l:'Material / supplier',nilai:o=>`${o.material} · ${o.supplier}`},{l:'Dipesan',nilai:o=>`${jml(o.qty_order,3)} ${o.satuan_order}${o.r.total==null?' · konversi belum lengkap':` = ${jml(o.r.total,3)} ${o.satuan_sppb}`}`},
         {l:'Diterima',nilai:o=>`${jml(o.r.diterima,3)} ${o.satuan_sppb}`},{l:'Menunggu',nilai:o=>o.ditutup?'Sisa ditutup':o.r.menunggu==null?'Belum dapat dihitung':`${jml(o.r.menunggu,3)} ${o.satuan_sppb} · ${jml(o.r.menunggu/o.faktor_order,3)} ${o.satuan_order}`},
         {l:'Perkiraan datang',nilai:o=>o.eta?tanggal(o.eta):'Belum diisi'},
+        ...(!ditunggu&&(P.admin()||P.punya('order'))?[{l:'Harga barang',nilai:o=>o.harga_total_barang==null?'Belum tersedia':`Rp ${jml(o.harga_total_barang)}`}]:[]),
         {l:'Tindakan',nilai:aksi}],orders,{kosong:'Belum ada order pada daftar ini.'}),
     ])]));
     const legacy=Object.entries(D.web().orderItem||{}).filter(([id])=>!D.daftarOrder().some(o=>Number(o.sppb_item_id)===Number(id)));
     if(legacy.length)konten.append(el('p.petunjuk',{teks:`${legacy.length} ceklis order lama belum memiliki rincian jumlah. Tidak dianggap seluruh kebutuhan telah dipesan; lengkapi melalui Tambah order.`}));
     if(!ditunggu){
+      if(P.admin()||P.punya('order')){
+        const rincian=biayaFifo(D.state.data,B.norm,B.unit);
+        const perBlok=new Map();for(const x of rincian){const nama=x.baris.blok||'Tanpa blok';const p=perBlok.get(nama)||{blok:nama,nilai:0,belum:0,diketahui:0};if(x.nilai!=null&&x.qtyBelum<Number(x.baris.qty)){p.nilai+=x.nilai;p.diketahui++;}if(x.qtyBelum>0)p.belum++;perBlok.set(nama,p);}
+        konten.append(el('div.lembar',{style:'margin-top:1rem'},[el('div.lembar-isi',{},[
+          el('h2',{teks:'Biaya material keluar per blok · FIFO'}),
+          el('p.bantuan',{teks:'Berdasarkan penerimaan terawal dan jumlah material setiap blok. Nilai dihitung ulang bila harga atau riwayat dikoreksi. Data tanpa harga dan urutan yang belum pasti perlu diperiksa; nilai belum lengkap bukan biaya akhir.'}),
+          tabel([{l:'Blok',k:'blok'},{l:'Biaya teridentifikasi',nilai:r=>r.diketahui?`Rp ${jml(r.nilai)}`:'Belum tersedia'},{l:'Status',nilai:r=>r.belum?`${r.belum} transaksi belum lengkap`:'Lengkap'}],[...perBlok.values()],{kosong:'Belum ada pengeluaran material.'}),
+          el('h3',{teks:'Rincian pengeluaran terbaru'}),el('p.bantuan',{teks:`Menampilkan maksimal 100 transaksi terbaru sesuai pencarian material/blok di atas; ringkasan tetap memakai semua ${rincian.length} transaksi.`}),tabel([{l:'Tanggal',nilai:x=>tanggal(x.baris.tanggal)},{l:'Blok',nilai:x=>x.baris.blok||'Tanpa blok'},{l:'Material',nilai:x=>x.baris.material},{l:'Jumlah',nilai:x=>`${jml(x.baris.qty)} ${x.baris.satuan}`},{l:'Biaya teridentifikasi',nilai:x=>x.nilai==null||x.qtyBelum>=Number(x.baris.qty)?'Belum tersedia':`Rp ${jml(x.nilai)}`},{l:'Keterangan',nilai:x=>x.alasan||'Lengkap'}],[...rincian].filter(x=>!cari||B.norm(`${x.baris.material} ${x.baris.blok||''}`).includes(cari)).sort((a,b)=>String(b.baris.tanggal||'').localeCompare(String(a.baris.tanggal||''))).slice(0,100),{kosong:'Belum ada pengeluaran material yang cocok.'})
+        ])]));
+      }
       const items=D.laporanSppb().filter(s=>D.statusAcc(s.id)===D.STATUS_ACC.FULL).flatMap(s=>s.items.filter(it=>!it.batal).map(it=>({...it,no:s.no_sppb,divisi:s.divisi_pemohon,s:D.ringkasPengadaan(it)})))
         .filter(it=>!cari||B.norm([it.no,it.material,it.divisi].join(' ')).includes(cari));
       konten.append(el('div.lembar',{style:'margin-top:1rem'},[el('div.lembar-isi',{},[
