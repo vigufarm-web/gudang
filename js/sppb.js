@@ -10,7 +10,7 @@ import { rapikan, inputMaster, inputAngka, namaFinal } from './form-util.js?v=8'
 import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
 import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
-import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=20261106';
+import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=pdf-20261111';
 import {simpanSppbBaru} from './sppb-baru.js?v=master-20261110';
 
 const chipStatus = (st) => el('span.chip' + (
@@ -412,7 +412,7 @@ async function cetakSurat(sppbId) {
   const kPenerima = el('input', { type: 'text', placeholder: 'Nama penerima barang (opsional)' });
   const lanjut = await new Promise((selesai) => {
     const p = panel('Cetak surat permintaan SPPB', el('div', {}, [
-      el('p.bantuan', { teks: `Surat resmi 1 halaman untuk SPPB ${s.no_sppb} mengikuti format SPPB perusahaan: `
+      el('p.bantuan', { teks: `Surat SPPB ${s.no_sppb} mengikuti format SPPB perusahaan: `
         + 'kop + logo, kolom Jumlah Diminta/Disetujui, Beban Biaya, Brand, Keterangan Tujuan Pemakaian, '
         + 'dan 5 kolom ttd: Dibuat, Diminta, Diperiksa, Mengetahui, Diterima.' }),
       el('p', { teks: `Status acc: ${stAcc}. `
@@ -468,7 +468,7 @@ async function cetakSurat(sppbId) {
   // kolom ttd: tahap yang sudah acc + punya gambar ttd → gambarnya ditempel;
   // selain itu ruang kosong untuk ttd basah. Nama kosong → garis titik.
   const ttd = (jabatan, nama, gambarTtd = '') => `
-    <td style="width:20%;text-align:center;vertical-align:bottom">
+    <td class="kolom-ttd" style="width:20%;text-align:center;vertical-align:bottom">
       <div style="font-weight:700">${jabatan}</div>
       <div style="height:78px;display:flex;align-items:center;justify-content:center">
         ${gambarTtd ? `<img src="data:image/png;base64,${gambarTtd}" alt="ttd" style="max-height:74px;max-width:95%">` : ''}
@@ -483,14 +483,23 @@ async function cetakSurat(sppbId) {
   w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8">
     <title>SPPB ${amanHtml(s.no_sppb)}</title>
     <style>
-      body{font-family:Calibri,Arial,Helvetica,sans-serif;color:#111;margin:26px;font-size:14px}
-      table.isi{width:100%;border-collapse:collapse;margin:6px 0 2px}
-      table.isi th,table.isi td{border:1.4px solid #111;padding:3px 7px;font-size:13.5px}
-      table.isi th{font-weight:700;text-align:center}
-      @media print{ body{margin:10mm} .noprint{display:none} }
+      @page{size:A4 landscape;margin:10mm}
+      *{box-sizing:border-box}
+      body{font-family:Calibri,Arial,Helvetica,sans-serif;color:#20342b;margin:24px auto;padding:0 18px;max-width:1100px;font-size:13px;line-height:1.35}
+      .kop{border-bottom:3px solid #306a47;margin-bottom:12px!important}
+      .judul-surat{margin:12px 0 14px!important;color:#1d4d34}
+      table.isi{width:100%;border-collapse:collapse;table-layout:fixed;margin:8px 0 5px}
+      table.isi th,table.isi td{border:1px solid #b9cbbd;padding:7px 6px;font-size:12px;overflow-wrap:anywhere;vertical-align:top}
+      table.isi th{background:#e6f0e8;color:#183e29;font-weight:700;text-align:center;vertical-align:middle}
+      table.isi tbody tr:nth-child(even){background:#f7faf7}
+      thead{display:table-header-group} table.isi tr{break-inside:avoid}
+      .tanda-tangan{border-collapse:collapse;margin-top:26px;break-inside:avoid;page-break-inside:avoid}
+      .kolom-ttd{padding:0 6px;color:#203d2c}
+      .noprint button{background:#306a47;color:white;border:0;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
+      @media print{body{margin:0;padding:0;max-width:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}.noprint{display:none}}
     </style></head><body>
 
-    <div style="position:relative;min-height:120px;margin-bottom:4px">
+    <div class="kop" style="position:relative;min-height:120px;margin-bottom:4px">
       <div style="position:absolute;left:0;top:0">${logo}</div>
       <div style="text-align:center;padding:4px 120px 0">
         <div style="font-size:23px;font-weight:800">${amanHtml(namaPerusahaan)}</div>
@@ -498,8 +507,7 @@ async function cetakSurat(sppbId) {
         <div style="font-size:13px;font-weight:700;font-style:italic">${amanHtml(alamat2)}</div>
       </div>
     </div>
-    <div style="border-top:1.6px solid #111;margin:4px 0 0"></div>
-    <div style="text-align:center;margin:5px 0 10px">
+    <div class="judul-surat" style="text-align:center;margin:5px 0 10px">
       <div style="font-weight:800">SURAT PERMOHONAN PEMBELIAN BARANG (SPPB)</div>
       <div style="font-weight:700;margin-top:2px">${barisNomor}</div>
     </div>
@@ -525,7 +533,7 @@ async function cetakSurat(sppbId) {
     ${s.keterangan ? `<div style="font-size:13px;margin-top:2px">Keterangan: ${amanHtml(s.keterangan)}</div>` : ''}
     ${nBatal ? `<div style="font-size:12px;margin-top:2px;color:#444">Catatan: ${nBatal} item dibatalkan saat proses persetujuan dan tidak tercantum di surat ini.</div>` : ''}
 
-    <table style="width:100%;margin-top:30px"><tr>
+    <table class="tanda-tangan" style="width:100%"><tr>
       ${ttd('Dibuat', kAdmin.value.trim(), gambarUntukPembuat(D.state.data,s,kAdmin.value.trim()))}
       ${ttd('Diminta', kepalaAcc?.oleh || kepala?.nama || '', kepalaAcc && kepalaAcc.sumber!=='manual' ? ttdKepala : '')}
       ${ttd('Diperiksa', ktuAcc?.oleh || dataKtu?.nama || '', ttdKtu)}
