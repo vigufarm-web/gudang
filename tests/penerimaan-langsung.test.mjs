@@ -20,3 +20,15 @@ test('concurrent revisions of the same direct receipt cannot overwrite each othe
  const base=sample();base.web.penerimaanLangsung={x:{id:'x',qty:1}};const local=structuredClone(base),remote=structuredClone(base);local.web.penerimaanLangsung.x.qty=2;remote.web.penerimaanLangsung.x.qty=3;
  assert.throws(()=>D.gabungTiga(base,local,remote),/Penerimaan langsung yang sama/);
 });
+test('pemasok tercatat; pemasok berbeda dan konversi belum lengkap tidak mengubah stok',()=>{
+ D.state.data=sample();D.state.password='';const before=D.laporanStok()[0].stok;
+ const raw={order_id:'ord-1',tanggal:'2026-11-04',qty_terima:3,satuan_terima:'sak'};
+ assert.throws(()=>D.tambah('material_masuk',{...raw,supplier_aktual:'Pemasok lain'}),/Pemasok berbeda/);
+ assert.equal(D.laporanStok()[0].stok,before);assert.equal(B.ringkasOrder(D.state.data,order).menunggu,8);
+ D.state.data.web.pesanan['ord-1'].faktor_stok=null;
+ assert.throws(()=>D.tambah('material_masuk',{...raw,supplier_aktual:'Supplier'}),/konversi/);
+ D.state.data.web.pesanan['ord-1'].faktor_stok=1;
+ const receipt=D.tambah('material_masuk',{...raw,supplier_aktual:'Supplier'});
+ assert.equal(receipt.supplier_aktual,'Supplier');assert.equal(receipt.sumber,'Supplier');
+ assert.equal(D.laporanStok()[0].stok,before+3);assert.equal(B.ringkasOrder(D.state.data,order).menunggu,5);
+});
