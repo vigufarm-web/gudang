@@ -60,22 +60,23 @@ export function formTerimaOrder(o,selesai,lama=null) {
   if(!bolehTerima()||lama&&!P.punya('revisi'))throw Error('Memerlukan hak Gudang dan hak input/revisi.');
   const qty=f('',lama?.qty_terima||'','number'),tgl=f('',lama?.tanggal||hariIni(),'date');
   const sat=el('select',{},[...new Set([o.satuan_order,o.satuan_sppb,o.satuan_stok])].map(s=>el('option',{value:s,teks:s})));sat.value=lama?.satuan_terima||o.satuan_order;
+  const supplierAktual=f('',lama?.supplier_aktual||o.supplier||'');
   const lebih=f('',lama?.alasan_lebih||''),ket=el('textarea',{rows:2},[lama?.keterangan||'']),info=el('p.petunjuk'),galat=el('div',{role:'alert'});
   const tujuan=el('select',{},[el('option',{value:'gudang',teks:'Masuk ke Gudang'}),el('option',{value:'langsung',teks:'Diterima langsung di lokasi/divisi'})]);tujuan.value=lama?.langsung?'langsung':'gudang';if(lama)tujuan.disabled=true;
   const penerima=f('',lama?.penerima||''),lokasi=f('',lama?.lokasi_tujuan||'');
   const detailLangsung=el('div',{},[isian('Nama penerima *',penerima),isian('Lokasi / divisi penerima *',lokasi)]);
   const tampilTujuan=()=>{detailLangsung.hidden=tujuan.value!=='langsung';update();};
-  const update=()=>{try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,alasan_lebih:lebih.value||'pratinjau'},lama?.id);info.textContent=tujuan.value==='langsung'?`Tidak menambah stok Gudang; pemenuhan SPPB ${jml(r.qty_sppb,3)} ${o.satuan_sppb}.`:`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}; pemenuhan SPPB ${jml(r.qty_sppb,3)} ${o.satuan_sppb}.`;}catch(e){info.textContent=e.message;}};
-  for(const inp of [qty,sat])inp.addEventListener('change',update);tujuan.addEventListener('change',tampilTujuan);
+  const update=()=>{try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,supplier_aktual:supplierAktual.value,alasan_lebih:lebih.value},lama?.id);const sisa=Math.max(0,(B.ringkasOrder(D.state.data,o,lama?.id).menunggu||0)-r.qty_sppb);const stok=tujuan.value==='langsung'?'Tidak menambah stok Gudang':`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}`;info.textContent=`Pemasok: ${r.supplier_aktual}. Diterima ${jml(qty.value)} ${sat.value} = ${jml(r.qty_sppb)} ${o.satuan_sppb} SPPB. ${stok}; sisa order ${jml(sisa)} ${o.satuan_sppb}.`; }catch(e){info.textContent=e.message.includes('Lengkapi konversi')?`Konversi belum lengkap. Satuan order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}. Minta petugas Order melengkapi konversi di Kantor Pusat / Order → Konversi / koreksi.`:e.message;}};
+  for(const inp of [qty,sat,supplierAktual,lebih])inp.addEventListener('input',update);tujuan.addEventListener('change',tampilTujuan);
   const tombol=el('button.tombol-utama',{type:'submit',teks:lama?'Simpan koreksi penerimaan':'Catat penerimaan'});let sibuk=false;
   const form=el('form',{onsubmit:async(e)=>{e.preventDefault();if(sibuk)return;sibuk=true;tombol.disabled=true;galat.textContent='';try{
     if(!tgl.value)throw Error('Tanggal penerimaan wajib diisi.');
-    const raw={order_id:o.id,tanggal:tgl.value,qty_terima:Number(qty.value),satuan_terima:sat.value,alasan_lebih:lebih.value.trim(),keterangan:ket.value.trim()};
+    const raw={order_id:o.id,tanggal:tgl.value,qty_terima:Number(qty.value),satuan_terima:sat.value,supplier_aktual:supplierAktual.value.trim(),alasan_lebih:lebih.value.trim(),keterangan:ket.value.trim()};
     if(tujuan.value==='langsung')D.simpanPenerimaanLangsung({...raw,penerima:penerima.value,lokasi_tujuan:lokasi.value},lama?.id||null);
     else if(lama)D.ubah('material_masuk',lama.id,raw);else D.tambah('material_masuk',raw);
     await simpan('Web: penerimaan order');p.tutup();selesai();
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
-    el('h3',{teks:o.nomor}),el('p',{teks:`${o.material} · ${o.supplier}`}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
+    el('h3',{teks:o.nomor}),el('p',{teks:`${o.material} · Pemasok pada order: ${o.supplier}`}),isian('Pemasok aktual (penjual) *',supplierAktual,{bantuan:'Jika pembelian berasal dari pemasok lain, petugas Order perlu koreksi atau membuat order baru sebelum penerimaan.'}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
     el('div.baris-isian',{},[isian('Jumlah diterima *',qty),isian('Satuan diterima',sat)]),info,
     isian('Alasan jika penerimaan melebihi sisa order',lebih),isian('Keterangan / alasan koreksi',ket),galat,tombol,
   ]);const p=panel(lama?'Koreksi penerimaan':'Terima barang dari order',form);tampilTujuan();
@@ -101,7 +102,7 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))&&!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>0)?el('button.tombol-kecil.tombol-samar',{teks:'Tutup sisa',onclick:async()=>{const alasan=await mintaTeks('Tutup sisa order','Sisa yang dibatalkan tidak dianggap diterima.',{label:'Alasan',wajib:true});if(alasan!=null){D.tutupSisaOrder(o.id,alasan);await simpan('Web: tutup sisa order');gambar();}}}):null,
       el('button.tombol-kecil.tombol-samar',{teks:'Riwayat terima',onclick:()=>{
         const riwayatPanel=panel(`Penerimaan ${o.nomor}`,el('div',{},[
-          tabel([{l:'Tanggal',k:'tanggal',jenis:'tanggal'},{l:'Diterima',nilai:m=>`${jml(m.qty_terima,3)} ${m.satuan_terima}`},{l:'Tujuan',nilai:m=>m.langsung?`Langsung: ${m.lokasi_tujuan} · ${m.penerima}`:'Gudang'},{l:'Stok Gudang',nilai:m=>m.langsung?'Tidak bertambah':`${jml(m.qty,3)} ${m.satuan}`},{l:'Retur',nilai:m=>m.langsung?'—':`${jml(B.returBaris(D.state.data,m.id),3)} ${m.satuan}`},{l:'Tindakan',nilai:m=>el('div',{},[
+          tabel([{l:'Tanggal',k:'tanggal',jenis:'tanggal'},{l:'Diterima',nilai:m=>`${jml(m.qty_terima,3)} ${m.satuan_terima}`},{l:'Pemasok aktual',nilai:m=>m.supplier_aktual||m.sumber||o.supplier||'—'},{l:'Tujuan',nilai:m=>m.langsung?`Langsung: ${m.lokasi_tujuan} · ${m.penerima}`:'Gudang'},{l:'Stok Gudang',nilai:m=>m.langsung?'Tidak bertambah':`${jml(m.qty,3)} ${m.satuan}`},{l:'Retur',nilai:m=>m.langsung?'—':`${jml(B.returBaris(D.state.data,m.id),3)} ${m.satuan}`},{l:'Tindakan',nilai:m=>el('div',{},[
             bolehTerima()&&P.punya('revisi')?el('button.tombol-kecil',{teks:'Koreksi',onclick:()=>{riwayatPanel.tutup();formTerimaOrder(o,gambar,m);}}):null,
             !m.langsung&&bisaEdit()&&P.admin()?el('button.tombol-kecil.tombol-samar',{teks:'Retur',onclick:()=>{riwayatPanel.tutup();formRetur(m,gambar);}}):null,
           ])}],o.r.masuk,{kosong:'Belum ada penerimaan.'}),
