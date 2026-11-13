@@ -22,3 +22,12 @@ test('penerimaan manual tanpa SPPB menyimpan pemilik dan fisiknya tetap Gudang',
  setup();const r=D.tambah('material_masuk',{tanggal:'2026-11-13',material:'Pupuk',satuan:'Kg',qty:2,pemilik_stok:'Padi'});
  assert.equal(r.pemilik_stok,'Padi');assert.equal(r.divisi,'Gudang');assert.equal(D.saldoMilik('Pupuk','Kg','Padi'),6);
 });
+test('koreksi pemilik mempertahankan lokasi dan keperluan kosong pada riwayat lama',()=>{
+ setup();D.state.data.tabel.material_masuk.push({id:3,material:'Pupuk',satuan:'Kg',qty:6,divisi:'Gudang'});
+ D.state.data.tabel.material_keluar.push({id:1,tanggal:'2025-01-01',material:'Pupuk',satuan:'Kg',qty:3,divisi:'Padi',blok:'Lokasi lama',diambil_oleh:'Uji',keperluan:''});
+ D.ubah('material_keluar',1,{pemilik_stok:'Gudang'});
+ assert.equal(D.cari('material_keluar',1).blok,'Lokasi lama');
+ assert.equal(D.cari('material_keluar',1).keperluan,'');
+ assert.equal(D.saldoMilik('Pupuk','Kg','Gudang'),3);
+ assert.throws(()=>D.tambah('material_keluar',{...keluar(1),keperluan:''}),/Keperluan/);
+});
