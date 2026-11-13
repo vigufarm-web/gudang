@@ -70,7 +70,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
       material: await namaFinal('master_material', kMaterial.value, 'Material'),
       satuan: D.normalkanSatuan(kSatuan.value),
       qty: Number(kQty.value),
-      blok: blokBbm?'':await namaFinal('master_blok', kBlok.value, 'Blok'),
+      blok: blokBbm?'':barisLama && rapikan(kBlok.value)===rapikan(barisLama.blok) ? barisLama.blok : await namaFinal('master_blok', kBlok.value, 'Blok'),
       divisi: await namaFinal('master_divisi', kDivisi.value, 'Divisi'),
       ...(!bbm?{pemilik_stok:kPemilik.value}:{}),
       // nama pengambil: beda kapital disamakan dengan ejaan yang paling sering
@@ -86,13 +86,13 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
     if (!nilai.diambil_oleh) galat.push('"Diambil oleh" wajib diisi.');
     if(!nilai.divisi||nilai.divisi.toLowerCase()==='gudang')galat.push('Pilih divisi pemakai selain Gudang.');
     if(!bbm&&!nilai.pemilik_stok)galat.push('Pilih divisi pemilik stok.');
-    if(!nilai.keperluan)galat.push('Keperluan pemakaian wajib diisi.');
+    if(!nilai.keperluan&&(!barisLama||barisLama.keperluan))galat.push('Keperluan pemakaian wajib diisi.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_keluar',barisLama,{...barisLama,...nilai});
     D.pastikanMaster('master_material', nilai.material, { satuan_default: nilai.satuan });
     if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
-    if (nilai.blok) D.pastikanMaster('master_blok', nilai.blok, { divisi: nilai.divisi || null, luas_ha: null });
+    if (nilai.blok && (!barisLama || rapikan(nilai.blok)!==rapikan(barisLama.blok))) D.pastikanMaster('master_blok', nilai.blok, { divisi: nilai.divisi || null, luas_ha: null });
     if (barisLama) D.ubah('material_keluar', barisLama.id, nilai);
     else if(blokBbm){
       const parts=blokBbm.ambil();
