@@ -1,5 +1,11 @@
 # Data Gudang — PT VIGU FARM INDONESIA
 
+### Pemilik stok material dan lokasi umum
+
+Material yang diterima dari SPPB dicatat berada di Gudang dengan pemilik mengikuti divisi pemohon SPPB. Penerimaan tanpa SPPB meminta pemilik. Saat material keluar, pilih divisi pemilik dan divisi pemakai; pemakaian lintas divisi mengurangi stok pemilik. BBM tetap stok bersama Gudang. Ringkasan Pemilik stok dan ekspor Excel menampilkan usulan saldo lama berdasarkan riwayat masuk dan keluar; Cabai dan asal yang tidak diketahui sementara masuk Gudang. Pinjaman lama yang tidak tercatat serta opname tanpa pemilik perlu diperiksa admin; riwayat tidak diubah otomatis. Saldo negatif atau selisih perlu ditelusuri sebelum dipakai sebagai dasar kepemilikan. Simpanan bersamaan diperiksa ulang agar tidak menghabiskan stok pemilik dua kali.
+
+Nurseri Pisang dan Nursery Padi adalah lokasi umum terpisah, bukan lahan tanam GIS. Nursery Padi muncul setelah sinkronisasi referensi GIS berhasil, tanpa mengubah catatan Nurseri Pisang.
+
 Situs untuk melihat **dan mengisi** data aplikasi desktop Gudang (GudangApp):
 
 | Menu                 | Isi                                                                                 |
