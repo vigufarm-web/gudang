@@ -500,13 +500,13 @@ function validasiPengeluaran(r,kecuali=null) {
   }
   if(B.norm(r.material)==='bbm')throw Error('Pilih jenis BBM yang sebenarnya: Pertalite, Pertamax atau Solar. Jangan gabungkan sebagai BBM.');
   if(!r.divisi?.trim()||B.norm(r.divisi)==='gudang')throw Error('Pilih divisi pemakai selain Gudang.');
-  if(!r.keperluan?.trim())throw Error('Keperluan pemakaian wajib diisi.');
+  const lama=kecuali?cari('material_keluar',kecuali):null;
+  if(!r.keperluan?.trim()&&(!lama||lama.keperluan?.trim()))throw Error('Keperluan pemakaian wajib diisi.');
   if(!(Number(r.qty)>0)||!Number.isFinite(Number(r.qty)))throw Error('Jumlah keluar harus positif.');
   const master=masterDenganNama('master_material',r.material),acuan=master?.satuan_default;
   if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Pengeluaran harus memakai satuan stok ${acuan}. Jangan mencampur satuan tanpa konversi penerimaan.`);
   if(['pertalite','pertamax','solar'].includes(B.norm(r.material))&&!B.samaUnit(r.satuan,'Liter'))throw Error('BBM ini dicatat dalam liter. Jenis BBM tidak boleh digabung.');
   const s=laporanStok().find(s=>B.norm(s.material)===B.norm(r.material)&&B.samaUnit(s.satuan,r.satuan));
-  const lama=kecuali?cari('material_keluar',kecuali):null;
   const tersedia=(s?.stok||0)+(lama&&B.norm(lama.material)===B.norm(r.material)&&B.samaUnit(lama.satuan,r.satuan)?Number(lama.qty)||0:0);
   if(Number(r.qty)>tersedia+1e-7&&!r.alasan_stok?.trim())throw Error('Jumlah melebihi stok Gudang. Periksa stok atau minta admin mencatat alasan koreksi.');
   if(Number(r.qty)>tersedia+1e-7&&!P.admin())throw Error('Hanya admin boleh memberi pengecualian stok dengan alasan.');
