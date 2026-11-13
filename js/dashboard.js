@@ -48,7 +48,7 @@ export async function halamanDashboard(wadah) {
       { l: 'Material', k: 'material' },
       { l: 'Kategori', k: 'kategori' },
       (!perDivisi||perDivisi==='pemilik') ? { l: 'Masuk bersih', k: 'masuk', jenis: 'angka', pecahan: 2 } : null,
-      perDivisi==='pemilik'?{l:'Opname sementara',k:'opname_sementara',jenis:'angka',pecahan:2}:!perDivisi?{l:'Penyesuaian opname',k:'penyesuaian',jenis:'angka',pecahan:2}:null,
+      perDivisi==='pemilik'?{l:'Penyesuaian Gudang',k:'opname_sementara',jenis:'angka',pecahan:2}:!perDivisi?{l:'Penyesuaian',k:'penyesuaian',jenis:'angka',pecahan:2}:null,
       { l: perDivisi===true?'Pemakaian':'Keluar', k: 'keluar', jenis: 'angka', pecahan: 2 },
       perDivisi!==true ? { l: perDivisi==='pemilik'?'Saldo pemilik':'Stok Gudang', nilai: (r) => el('strong', { style: r.stok < 0 ? 'color:var(--merah)' : '', teks: angka(r.stok, 2) }), rata: 'angka' } : null,
       perDivisi==='pemilik'?{l:'Pemeriksaan',k:'status'}:null,
@@ -105,7 +105,7 @@ export async function halamanDashboard(wadah) {
       ]),
       tempatStok,
       el('p.bantuan', { style: 'margin-top:.6rem', teks:
-        'Lokasi stok berada di Gudang. Pemilik stok lama disusun dari divisi pada riwayat dan perlu diperiksa jika terjadi pinjaman yang belum tercatat. Selisih opname tanpa pemilik ditempatkan sementara pada Gudang. BBM tetap stok bersama.' }),
+        'Lokasi stok berada di Gudang. Pemilik stok lama disusun dari divisi pada riwayat dan perlu diperiksa jika terjadi pinjaman yang belum tercatat. Selisih opname tanpa pemilik dan koreksi administratif ditampilkan pada Gudang. Koreksi administratif bukan hasil hitung fisik. BBM tetap stok bersama.' }),
     ])]),
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('h2', { style: 'margin-bottom:.6rem', teks: 'SPPB yang belum / sebagian direalisasi' }),
