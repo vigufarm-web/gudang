@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as B from '../js/pengadaan-model.js';
 import * as D from '../js/data.js?v=8';
 const order={id:'ord-1',sppb_item_id:1,material:'Semen',supplier:'Supplier',qty_order:10,satuan_order:'sak',satuan_sppb:'sak',satuan_stok:'sak',faktor_order:1,faktor_stok:1};
-const sample=()=>({tabel:{master_material:[{id:1,nama:'Semen',satuan_default:'sak'}],material_masuk:[{id:1,order_id:'ord-1',sppb_item_id:1,material:'Semen',satuan:'sak',qty:2,qty_sppb:2}],material_keluar:[],sppb:[{id:1,no_sppb:'UJI'}],sppb_items:[{id:1,sppb_id:1,material:'Semen',satuan:'sak',qty_diminta:10}]},web:{pengguna:{u:{nama:'Uji',admin:true,aktif:true,sandi:{hash:'fixture'}}},pesanan:{'ord-1':{...order}},accSppb:{'1':{kepala:{status:'disetujui'},ktu:{status:'disetujui'}}}}});
+const sample=()=>({tabel:{master_material:[{id:1,nama:'Semen',satuan_default:'sak'}],material_masuk:[{id:1,order_id:'ord-1',sppb_item_id:1,material:'Semen',satuan:'sak',qty:2,qty_sppb:2}],material_keluar:[],sppb:[{id:1,no_sppb:'UJI',divisi_pemohon:'Pisang'}],sppb_items:[{id:1,sppb_id:1,material:'Semen',satuan:'sak',qty_diminta:10}]},web:{pengguna:{u:{nama:'Uji',admin:true,aktif:true,sandi:{hash:'fixture'}}},pesanan:{'ord-1':{...order}},accSppb:{'1':{kepala:{status:'disetujui'},ktu:{status:'disetujui'}}}}});
 globalThis.sessionStorage={getItem:()=>JSON.stringify({id:'u',hash:'fixture'})};
 globalThis.localStorage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
 test('penerimaan langsung updates order and SPPB but never warehouse stock',()=>{
@@ -31,4 +31,12 @@ test('pemasok tercatat; pemasok berbeda dan konversi belum lengkap tidak menguba
  const receipt=D.tambah('material_masuk',{...raw,supplier_aktual:'Supplier'});
  assert.equal(receipt.supplier_aktual,'Supplier');assert.equal(receipt.sumber,'Supplier');
  assert.equal(D.laporanStok()[0].stok,before+3);assert.equal(B.ringkasOrder(D.state.data,order).menunggu,5);
+});
+test('pemilik penerimaan baru mengikuti pemohon SPPB, koreksi lama tidak mengubah pemilik',()=>{
+ const d=sample();d.tabel.sppb[0].divisi_pemohon='Pisang';
+ const raw={order_id:'ord-1',tanggal:'2026-11-04',qty_terima:1,satuan_terima:'sak',supplier_aktual:'Supplier'};
+ const baru=B.susunPenerimaan(d,raw);
+ assert.equal(baru.divisi,'Gudang');assert.equal(baru.pemilik_stok,'Pisang');
+ const lama=B.susunPenerimaan(d,raw,1);assert.equal(lama.pemilik_stok,undefined);
+ const lamaTerbagi=B.susunPenerimaan(d,{...raw,pemilik_stok:'Padi'},1);assert.equal(lamaTerbagi.pemilik_stok,'Padi');
 });

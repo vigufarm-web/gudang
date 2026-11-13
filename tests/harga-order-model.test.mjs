@@ -26,6 +26,11 @@ test('harga per unit stok mengikuti konversi kemasan',()=>{
  const d={tabel:{material_masuk:[{id:1,tanggal:'2026-01-01',material:'P',satuan:'kg',qty:20,order_id:'a'}],material_keluar:[{id:2,tanggal:'2026-01-02',material:'P',satuan:'kg',qty:4}]},web:{pesanan:{a:{qty_order:2,faktor_order:10,faktor_stok:1,harga_total_barang:200000,ongkir_status:'termasuk'}}}};
  assert.equal(biayaFifo(d,norm,norm)[0].nilai,40000);
 });
+test('FIFO mengikuti pemilik stok, termasuk pemakaian lintas divisi',()=>{
+ const order=(harga)=>({qty_order:10,faktor_order:1,faktor_stok:1,harga_total_barang:harga,ongkir_status:'termasuk'});
+ const d={tabel:{material_masuk:[{id:1,tanggal:'2026-01-01',material:'P',satuan:'kg',qty:10,order_id:'a',pemilik_stok:'Pisang'},{id:2,tanggal:'2026-01-02',material:'P',satuan:'kg',qty:10,order_id:'b',pemilik_stok:'Padi'}],material_keluar:[{id:3,tanggal:'2026-01-03',material:'P',satuan:'kg',qty:2,divisi:'Pisang',pemilik_stok:'Padi'}]},web:{pesanan:{a:order(100),b:order(200)}}};
+ assert.equal(biayaFifo(d,norm,norm)[0].nilai,40);
+});
 test('harga belum diisi bukan nol',()=>{
   assert.deepEqual(hitungHargaOrder({jumlah:5,cara:'satuan',nilai:''}),{hargaSatuan:null,totalBarang:null});
   assert.deepEqual(hitungHargaOrder({jumlah:5,cara:'satuan',nilai:0}),{hargaSatuan:0,totalBarang:0});

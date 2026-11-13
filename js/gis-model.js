@@ -74,7 +74,16 @@ export function gisSyncDay(now=new Date().toISOString()) {
  return new Date(ms+3600000).toISOString().slice(0,10);
 }
 export function gisSyncDue(data,now=new Date().toISOString()) {
- return !!data?.web?.gis?.reference_access && data.web.gis.last_success_day!==gisSyncDay(now);
+ const rows=data?.tabel?.master_blok,divisions=data?.tabel?.master_divisi;
+ const missing=Array.isArray(rows)&&Array.isArray(divisions)&&['Padi','Pisang'].some(d=>nurseryMissing(rows,divisions,d));
+ const pending=Array.isArray(rows)&&rows.some(r=>/^(?:nurser[yi]|nurser[yi] (?:padi|pisang))$/i.test(String(r.nama||'').trim())&&['padi','pisang'].includes(norm(r.divisi))&&Number(r.luas_ha||0)===0&&!data?.web?.gis?.mappings?.[r.id]&&!data?.web?.gis?.general_locations?.[r.id]);
+ return !!data?.web?.gis?.reference_access && (missing||pending||data.web.gis.last_success_day!==gisSyncDay(now));
+}
+function nurseryMissing(rows,divisions,division){
+ const name='Nursery '+division;
+ return divisions.some(d=>norm(d.nama)===norm(division))&&
+  !rows.some(r=>norm(r.divisi)===norm(division)&&/^(?:nurser[yi]|nurser[yi] (?:padi|pisang))$/i.test(String(r.nama||'').trim()))&&
+  !rows.some(r=>norm(r.nama)===norm(name));
 }
 // Work on a copy. Invalid catalogs can never partially change live masters.
 export function automaticGISData(source,catalog,app,now=new Date().toISOString()) {
@@ -89,7 +98,15 @@ export function automaticGISData(source,catalog,app,now=new Date().toISOString()
  // Retain reviewed general locations. Recognize only explicit facility names;
  // legacy coded plots without a GIS match remain historical, never guessed.
  g.general_locations||={};
- for(const l of localBlocks(data,app))if(!g.mappings[l.id]&&Number(l.area||0)===0&&/^(?:ph(?:\s|$)|packing(?:\s|$)|nurser[yi]$|barak(?:\s|$)|jalan kebun$|kantor$|gudang$|workshop$|pos security$|all area(?:\s|$)|semua area$)/i.test(l.name))g.general_locations[l.id]=true;
+ // Nursery is a facility, not a mapped planting plot. Keep a distinct label
+ // because transaction history currently identifies locations by name.
+ if(app==='gudang')for(const division of ['Padi','Pisang']){
+  const name='Nursery '+division;
+  if(!nurseryMissing(rows,divisions,division))continue;
+  const id=rows.reduce((m,r)=>Math.max(m,Number(r.id)||0),0)+1;
+  rows.push({id,nama:name,divisi:division,luas_ha:0});g.general_locations[id]=true;
+ }
+ for(const l of localBlocks(data,app))if(!g.mappings[l.id]&&Number(l.area||0)===0&&/^(?:ph(?:\s|$)|packing(?:\s|$)|nurser[yi](?:\s+(?:padi|pisang))?$|barak(?:\s|$)|jalan kebun$|kantor$|gudang$|workshop$|pos security$|all area(?:\s|$)|semua area$)/i.test(l.name))g.general_locations[l.id]=true;
  g.authoritative=true;
  // Reuse only unambiguous existing names first, preserving numeric identities.
  const first=applyGISPlan(data,catalog,app,{allowDateConflicts:true,now});

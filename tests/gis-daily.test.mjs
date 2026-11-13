@@ -39,6 +39,25 @@ test('Gudang copies only GIS masters and preserves stock transaction numbers and
  const data={tabel:{master_blok:[{id:5,nama:'A01',divisi:'Pisang',luas_ha:1}],master_divisi:[],material_keluar:[{id:1,blok:'A01',jumlah:15}]},web:{gis:{reference_access:{...access,app:'gudang'}}}};const r=automaticGISData(data,catalog(),'gudang').data;assert.deepEqual(r.tabel.material_keluar,data.tabel.material_keluar);assert.equal(r.web.gis.legacy_baseline[5].area,1);assert.equal(r.tabel.master_blok[0].luas_ha,2);assert.ok(r.tabel.master_divisi.some(d=>d.nama==='Mangga'));
 });
 
+test('Nursery Padi stays a distinct zero-area general location across GIS refreshes',()=>{
+ const data={tabel:{master_blok:[{id:1,nama:'Nurseri',divisi:'Pisang',luas_ha:0}],master_divisi:[{id:1,nama:'Pisang'},{id:2,nama:'Padi'}],material_keluar:[{id:1,blok:'Nurseri',divisi:'Pisang',qty:3}]},web:{gis:{reference_access:{...access,app:'gudang'}}}};
+ const a=automaticGISData(data,catalog(),'gudang','2026-10-31T00:00:00Z').data;
+ const p=a.tabel.master_blok.find(b=>b.nama==='Nursery Padi');
+ assert.ok(p);assert.equal(p.divisi,'Padi');assert.equal(p.luas_ha,0);assert.equal(p.gis_active,true);assert.equal(a.web.gis.general_locations[p.id],true);
+ assert.deepEqual(a.tabel.material_keluar,data.tabel.material_keluar);
+ const b=automaticGISData(a,catalog(),'gudang','2026-11-01T00:00:00Z').data;
+ assert.equal(b.tabel.master_blok.filter(x=>x.nama==='Nursery Padi').length,1);
+});
+
+test('both divisions get a selectable nursery without changing unnamed legacy locations',()=>{
+ const data={tabel:{master_blok:[{id:1,nama:'Nurseri',divisi:'',luas_ha:0}],master_divisi:[{id:1,nama:'Pisang'},{id:2,nama:'Padi'}],material_keluar:[]},web:{gis:{reference_access:{...access,app:'gudang'}}}};
+ const a=automaticGISData(data,catalog(),'gudang','2026-10-31T00:00:00Z').data;
+ for(const divisi of ['Pisang','Padi']){const r=a.tabel.master_blok.find(b=>b.nama==='Nursery '+divisi);assert.ok(r);assert.equal(r.divisi,divisi);assert.equal(r.gis_active,true);}
+ assert.equal(a.tabel.master_blok.find(r=>r.id===1).divisi,'');
+ data.web.gis.last_success_day='2026-10-31';assert.equal(gisSyncDue(data,'2026-10-31T00:00:00Z'),true);
+ assert.equal(gisSyncDue(a,'2026-10-31T00:00:00Z'),false);
+});
+
 test('GIS-only rebase keeps concurrent staff transactions and uses remote numeric identities',async()=>{
  const {gisOnlyChanges,rebaseGISOnly}=await import('../js/gis-model.js');const base=source(),local=automaticGISData(base,catalog(),'payrol','2026-10-31T01:00:00Z').data,remote=structuredClone(base);remote.tabel.hk.push({id:2,block_id:7,jumlah:8});remote.tabel.blocks.push({id:8,nama_blok:'Lokasi staf',division_id:1,luas:0});
  assert.equal(gisOnlyChanges(base,local,'payrol'),true);const merged=rebaseGISOnly(base,local,remote,'payrol');assert.deepEqual(merged.tabel.hk,remote.tabel.hk);const m=merged.tabel.blocks.find(b=>b.gis_block_id==='uuid-M');assert.equal(m.id,9);assert.equal(merged.web.gis.mappings[9],'uuid-M');

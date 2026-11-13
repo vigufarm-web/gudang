@@ -39,18 +39,19 @@ export async function halamanDashboard(wadah) {
   // ------------------------------------------------------------ tabel stok
   const tempatStok = el('div');
   const gambarStok = () => {
-    const data = (perDivisi ? D.laporanPemakaianDivisi(kategori || null) : D.laporanStok(kategori || null))
+    const data = (perDivisi==='pemilik' ? D.laporanKepemilikan(kategori || null) : perDivisi ? D.laporanPemakaianDivisi(kategori || null) : D.laporanStok(kategori || null))
       .filter((r) => !kata
         || kecil(r.material).includes(kecil(kata))
         || kecil(r.divisi || '').includes(kecil(kata)));
     const kolom = [
-      perDivisi ? { l: 'Divisi', k: 'divisi' } : null,
+      perDivisi ? { l: perDivisi==='pemilik'?'Pemilik':'Divisi', k: 'divisi' } : null,
       { l: 'Material', k: 'material' },
       { l: 'Kategori', k: 'kategori' },
-      !perDivisi ? { l: 'Masuk bersih', k: 'masuk', jenis: 'angka', pecahan: 2 } : null,
-      !perDivisi?{l:'Penyesuaian opname',k:'penyesuaian',jenis:'angka',pecahan:2}:null,
-      { l: perDivisi?'Pemakaian':'Keluar', k: 'keluar', jenis: 'angka', pecahan: 2 },
-      !perDivisi ? { l: 'Stok Gudang', nilai: (r) => el('strong', { style: r.stok < 0 ? 'color:var(--merah)' : '', teks: angka(r.stok, 2) }), rata: 'angka' } : null,
+      (!perDivisi||perDivisi==='pemilik') ? { l: 'Masuk bersih', k: 'masuk', jenis: 'angka', pecahan: 2 } : null,
+      perDivisi==='pemilik'?{l:'Opname sementara',k:'opname_sementara',jenis:'angka',pecahan:2}:!perDivisi?{l:'Penyesuaian opname',k:'penyesuaian',jenis:'angka',pecahan:2}:null,
+      { l: perDivisi===true?'Pemakaian':'Keluar', k: 'keluar', jenis: 'angka', pecahan: 2 },
+      perDivisi!==true ? { l: perDivisi==='pemilik'?'Saldo pemilik':'Stok Gudang', nilai: (r) => el('strong', { style: r.stok < 0 ? 'color:var(--merah)' : '', teks: angka(r.stok, 2) }), rata: 'angka' } : null,
+      perDivisi==='pemilik'?{l:'Pemeriksaan',k:'status'}:null,
       { l: 'Satuan', k: 'satuan' },
     ].filter(Boolean);
     kosongkan(tempatStok).append(tabel(kolom, data, { kosong: 'Tidak ada stok untuk filter ini.' }));
@@ -73,7 +74,7 @@ export async function halamanDashboard(wadah) {
   });
   const tempatMode = el('div', { style: 'display:flex;gap:.4rem' });
   const gambarUlangMode = () => kosongkan(tempatMode)
-    .append(tombolMode('Stok gudang', false), tombolMode('Pemakaian per divisi', true));
+    .append(tombolMode('Stok gudang', false), tombolMode('Pemakaian per divisi', true),tombolMode('Pemilik stok', 'pemilik'));
   gambarUlangMode();
 
   // ------------------------------------------------- SPPB belum realisasi
@@ -104,7 +105,7 @@ export async function halamanDashboard(wadah) {
       ]),
       tempatStok,
       el('p.bantuan', { style: 'margin-top:.6rem', teks:
-        'Stok hanya berada di Gudang. Barang keluar langsung menjadi pemakaian divisi; tidak dihitung sebagai stok divisi. Pertalite, Pertamax dan Solar dipisah per material.' }),
+        'Lokasi stok berada di Gudang. Pemilik stok lama disusun dari divisi pada riwayat dan perlu diperiksa jika terjadi pinjaman yang belum tercatat. Selisih opname tanpa pemilik ditempatkan sementara pada Gudang. BBM tetap stok bersama.' }),
     ])]),
     el('div.lembar', {}, [el('div.lembar-isi', {}, [
       el('h2', { style: 'margin-bottom:.6rem', teks: 'SPPB yang belum / sebagian direalisasi' }),

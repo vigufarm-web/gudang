@@ -58,6 +58,7 @@ export function formOrder(it,selesai,o=null,hargaSaja=false) {
 
 export function formTerimaOrder(o,selesai,lama=null) {
   if(!bolehTerima()||lama&&!P.punya('revisi'))throw Error('Memerlukan hak Gudang dan hak input/revisi.');
+  const item=D.cari('sppb_items',o.sppb_item_id),sppb=item&&D.cari('sppb',item.sppb_id);
   const qty=f('',lama?.qty_terima||'','number'),tgl=f('',lama?.tanggal||hariIni(),'date');
   const sat=el('select',{},[...new Set([o.satuan_order,o.satuan_sppb,o.satuan_stok])].map(s=>el('option',{value:s,teks:s})));sat.value=lama?.satuan_terima||o.satuan_order;
   const supplierAktual=f('',lama?.supplier_aktual||o.supplier||'');
@@ -76,7 +77,7 @@ export function formTerimaOrder(o,selesai,lama=null) {
     else if(lama)D.ubah('material_masuk',lama.id,raw);else D.tambah('material_masuk',raw);
     await simpan('Web: penerimaan order');p.tutup();selesai();
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
-    el('h3',{teks:o.nomor}),el('p',{teks:`${o.material} · Pemasok pada order: ${o.supplier}`}),isian('Pemasok aktual (penjual) *',supplierAktual,{bantuan:'Jika pembelian berasal dari pemasok lain, petugas Order perlu koreksi atau membuat order baru sebelum penerimaan.'}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
+    el('h3',{teks:o.nomor}),el('p',{teks:`${o.material} · Pemasok pada order: ${o.supplier}`}),el('p.bantuan',{teks:['solar','pertalite','pertamax'].includes(B.norm(o.material))?'BBM dicatat sebagai stok bersama Gudang.':`Divisi pemohon SPPB: ${sppb?.divisi_pemohon||'belum diketahui'}. Penerimaan ke Gudang dicatat untuk divisi tersebut; lokasi fisik tetap Gudang.`}),isian('Pemasok aktual (penjual) *',supplierAktual,{bantuan:'Jika pembelian berasal dari pemasok lain, petugas Order perlu koreksi atau membuat order baru sebelum penerimaan.'}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
     el('div.baris-isian',{},[isian('Jumlah diterima *',qty),isian('Satuan diterima',sat)]),info,
     isian('Alasan jika penerimaan melebihi sisa order',lebih),isian('Keterangan / alasan koreksi',ket),galat,tombol,
   ]);const p=panel(lama?'Koreksi penerimaan':'Terima barang dari order',form);tampilTujuan();
