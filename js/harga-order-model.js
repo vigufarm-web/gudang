@@ -32,7 +32,7 @@ export function biayaFifo(d, normal, satuan) {
   }
   for (const {physical:k,events} of kelompok.values()) {
     // Retur dan opname membutuhkan urutan yang tidak selalu tersedia pada data lama.
-    const rumit=ret.some(r=>key(r)===k)||opname.some(o=>(o.items||[]).some(r=>key(r)===k));
+    const rumit=ret.some(r=>key(r)===k)||opname.some(o=>(o.items||[]).some(r=>key(r)===k))||Object.values(d.web?.koreksiStok||{}).some(r=>key(r)===k);
     const tanggalHilang=events.some(e=>!/^\d{4}-\d{2}-\d{2}$/.test(e.r.tanggal||''));
     const hariMasuk=new Map();
     for(const e of events.filter(x=>x.jenis==='masuk')) hariMasuk.set(e.r.tanggal,(hariMasuk.get(e.r.tanggal)||0)+1);
