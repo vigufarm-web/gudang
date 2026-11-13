@@ -3,6 +3,7 @@ export {bagiProporsi};
 import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import {norm,unit,samaUnit} from './pengadaan-model.js?v=8';
+import {saldoPemilik} from './audit-pemilik-model.js';
 export const dokumen=()=>Object.values(D.web().permintaanMaterial||{});
 export const permintaanTerlihat=()=>dokumen().filter(o=>P.mandor()?o.pemohon.id===P.siapa()?.id&&P.cakupan(o.divisi):P.admin()||P.punya('gudang')||P.cakupan(o.divisi));
 export const opname=()=>Object.values(D.web().stokOpname||{});
@@ -59,7 +60,16 @@ export function serahkan(id,qty,tanggal,penerima){
  requireThat(daftar.length,'Isi jumlah penyerahan.');D.tambahBatchKeluar(daftar,true);jejak(o,'Penyerahan '+noSerah);return batch;
 }
 export function tutupPermintaan(id,alasan){const o=D.web().permintaanMaterial[id];requireThat(o&&(P.admin()||P.punya('gudang')||o.pemohon.id===actor().id),'Tidak berhak menutup permintaan.');requireThat(!['Ditutup','Ditolak'].includes(o.status)&&alasan?.trim(),'Alasan penutupan wajib diisi; dokumen tidak boleh ditutup dua kali.');o.status='Ditutup';jejak(o,'Tutup sisa / batalkan',alasan);}
-export const adjustment=(d)=>Object.values(d?.web?.stokOpname||{}).filter(o=>o.status==='Disetujui').flatMap(o=>o.items.map(r=>({material:r.material,satuan:r.satuan,qty:r.fisik-r.sistem,opname_id:o.id})));
+export const adjustment=(d)=>[...Object.values(d?.web?.stokOpname||{}).filter(o=>o.status==='Disetujui').flatMap(o=>o.items.map(r=>({material:r.material,satuan:r.satuan,qty:r.fisik-r.sistem,opname_id:o.id}))),...Object.values(d?.web?.koreksiStok||{}).map(r=>({material:r.material,satuan:r.satuan,qty:r.qty,opname_id:'koreksi:'+r.id}))];
+export function koreksiSaldoGudang(material,satuan,alasan){
+ requireThat(P.admin(),'Hanya admin dapat mencatat koreksi administratif.');
+ requireThat(alasan?.trim(),'Alasan koreksi wajib diisi.');
+ requireThat(!opname().some(o=>['Draf','Diajukan'].includes(o.status)&&o.items.some(r=>norm(r.material)===norm(material)&&samaUnit(r.satuan,satuan))),'Material sedang dalam proses opname.');
+ const saldo=D.saldoMilik(material,satuan,'Gudang');
+ requireThat(Number.isFinite(saldo)&&saldo < -1e-7,'Saldo Gudang tidak negatif atau telah berubah. Muat ulang data.');
+ const id=uid(),r={id,material,satuan,qty:-saldo,saldo_acuan:saldo,alasan:alasan.trim(),oleh:actor(),waktu:waktu()};
+ (D.web().koreksiStok ||= {})[id]=r;D.tandaiBerubah();return r;
+}
 function basisJejak(material,satuan){const match=r=>norm(r.material)===norm(material)&&samaUnit(r.satuan,satuan),m={};for(const tab of ['material_masuk','material_keluar'])for(const r of D.baris(tab).filter(match))m[tab+':'+r.id]=JSON.stringify(r);for(const r of Object.values(D.web().returPenerimaan||{}).filter(match))m['retur:'+r.id]=JSON.stringify(r);for(const r of adjustment(D.state.data).filter(match))m['opname:'+r.opname_id]=JSON.stringify(r);return m;}
 export function buatOpname(materials,tanggal){
  requireThat((P.punya('opname')||P.punya('gudang'))&&materials.length,'Hak opname dan minimal satu material diperlukan.');requireThat(/^\d{4}-\d{2}-\d{2}$/.test(tanggal),'Tanggal wajib diisi.');const ids=new Set();
@@ -83,11 +93,18 @@ export function auditWorkflow(){
  const used=new Set();for(const o of opname())if(['Draf','Diajukan'].includes(o.status))for(const r of o.items){const k=norm(r.material)+'|'+unit(r.satuan);requireThat(!used.has(k),'Ada opname bersamaan untuk material yang sama. Muat ulang data.');used.add(k);}
 }
 export function jagaGabungWorkflow(dasar,lokal,remote){
- for(const bagian of ['permintaanMaterial','stokOpname','permintaanHapus'])for(const [id,l] of Object.entries(lokal.web?.[bagian]||{})){const b=dasar.web?.[bagian]?.[id],r=remote.web?.[bagian]?.[id];if(JSON.stringify(l)!==JSON.stringify(b)&&JSON.stringify(r)!==JSON.stringify(b)&&JSON.stringify(l)!==JSON.stringify(r))throw Error('Dokumen permintaan/opname/penghapusan yang sama telah diubah perangkat lain. Simpan draf sebagai referensi lalu muat ulang sebelum mengulangi tindakan.');}
+ for(const bagian of ['permintaanMaterial','stokOpname','permintaanHapus','koreksiStok'])for(const [id,l] of Object.entries(lokal.web?.[bagian]||{})){const b=dasar.web?.[bagian]?.[id],r=remote.web?.[bagian]?.[id];if(JSON.stringify(l)!==JSON.stringify(b)&&JSON.stringify(r)!==JSON.stringify(b)&&JSON.stringify(l)!==JSON.stringify(r))throw Error('Dokumen yang sama telah diubah perangkat lain. Simpan draf sebagai referensi lalu muat ulang sebelum mengulangi tindakan.');}
 }
 
 export function validasiSimpanWorkflow(basis){
  auditWorkflow();
+ const corrections=D.web().koreksiStok||{},lamaKoreksi=basis.web?.koreksiStok||{};
+ for(const [id,r] of Object.entries(lamaKoreksi))requireThat(JSON.stringify(corrections[id])===JSON.stringify(r),'Riwayat koreksi tidak dapat diubah atau dihapus.');
+ for(const [id,r] of Object.entries(corrections))if(!lamaKoreksi[id]){
+  const snapshot=copy(D.state.data);delete snapshot.web.koreksiStok[id];
+  const before=saldoPemilik(snapshot,r.material,r.satuan,'Gudang');
+  requireThat(Number.isFinite(before)&&before < -1e-7&&Math.abs(before-r.saldo_acuan)<1e-7&&Math.abs(r.qty+before)<1e-7,'Saldo acuan koreksi berubah. Muat ulang dan periksa kembali.');
+ }
  const h=new Set();for(const r of Object.values(D.web().permintaanHapus||{}))if(r.status==='menunggu'){const k=r.tabel+':'+r.baris_id;requireThat(!h.has(k),'Ada permintaan hapus ganda untuk transaksi yang sama. Muat ulang data.');h.add(k);}
  for(const lama of basis.tabel?.material_masuk||[])if(!D.cari('material_masuk',lama.id)){const s=D.laporanStok().find(x=>norm(x.material)===norm(lama.material)&&samaUnit(x.satuan,lama.satuan));requireThat((s?.stok||0)>=-1e-7,'Penghapusan penerimaan dan transaksi bersamaan membuat stok negatif. Muat ulang dan periksa.');}
  for(const o of opname()){
