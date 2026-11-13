@@ -8,7 +8,7 @@ globalThis.localStorage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
 function setup(admin=true){D.state.belumDisimpan=false;D.state.data={rev:42,tabel:{master_material:[],material_masuk:[{id:1,tanggal:'2026-11-01',material:'Solar',satuan:'Liter',qty:9}],material_keluar:[{id:2,tanggal:'2026-11-02',material:'Solar',satuan:'Liter',qty:2,divisi:'Infra'}],sppb:[],sppb_items:[]},web:{pengguna:{u:{nama:'Uji',admin,aktif:true,sandi:{hash:'test'}}}}};}
 test('hasil XLSX memuat stok pemilik, BBM terpisah dan biaya untuk admin',async()=>{
  setup();const sheets=siapkanLaporan({dari:'2026-11-01',sampai:'2026-11-30'});
- assert.equal(sheets.length,11);assert.ok(sheets.some(s=>s.nama==='Stok Pemilik'));assert.equal(sheets[0].baris[4][6].v,7);
+ assert.equal(sheets.length,12);assert.ok(sheets.some(s=>s.nama==='Stok Pemilik'));assert.ok(sheets.some(s=>s.nama==='Koreksi administratif'));assert.equal(sheets[0].baris[4][6].v,7);
  assert.equal(sheets[1].baris.length,4);assert.equal(sheets[3].baris.length,5);
  const bytes=await buatXlsx(sheets);assert.ok(bytes.length>1000);
 });
