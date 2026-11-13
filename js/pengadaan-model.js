@@ -43,6 +43,12 @@ export function susunOrder(d,raw,id) {
 export function susunPenerimaan(d,raw,kecuali=null) {
   const o=d.web?.pesanan?.[raw.order_id];
   if(!o)throw Error('Order tidak ditemukan.');
+  const item=(d.tabel?.sppb_items||[]).find(x=>String(x.id)===String(o.sppb_item_id));
+  const sppb=item&&(d.tabel?.sppb||[]).find(x=>String(x.id)===String(item.sppb_id));
+  // Penerimaan lama tidak dialokasikan ulang saat dikoreksi; hanya penerimaan
+  // baru menyimpan divisi pemohon sebagai informasi kepemilikan.
+  let pemilik=['solar','pertalite','pertamax'].includes(norm(o.material))?'':kecuali==null ? String(sppb?.divisi_pemohon||'').trim() : raw.pemilik_stok;
+  if(norm(pemilik)==='cabai')pemilik='Gudang';
   const supplierAktual=String(raw.supplier_aktual??o.supplier??'').trim();
   if(!supplierAktual)throw Error('Isi pemasok yang menjual barang.');
   if(norm(supplierAktual)!==norm(o.supplier))throw Error('Pemasok berbeda dari order. Minta petugas Order koreksi order yang belum diterima, atau tutup sisa dan buat order baru agar harga dan FIFO benar.');
@@ -56,6 +62,6 @@ export function susunPenerimaan(d,raw,kecuali=null) {
   else throw Error('Satuan penerimaan tidak sesuai order.');
   if(basis>ringkasOrder(d,o,kecuali).menunggu+1e-7&&!raw.alasan_lebih?.trim())throw Error('Penerimaan melebihi sisa order. Periksa jumlah atau isi alasan pengecualian.');
   return {...raw,material:o.material,satuan:o.satuan_stok,qty:basis*o.faktor_stok,qty_sppb:basis,
-    sppb_item_id:o.sppb_item_id,divisi:'Gudang',sumber:supplierAktual,supplier_aktual:supplierAktual,
+    sppb_item_id:o.sppb_item_id,divisi:'Gudang',...(pemilik?{pemilik_stok:pemilik}:{}),sumber:supplierAktual,supplier_aktual:supplierAktual,
     snapshot_konversi:{faktor_order:o.faktor_order,faktor_stok:o.faktor_stok,satuan_order:o.satuan_order,satuan_sppb:o.satuan_sppb,satuan_stok:o.satuan_stok}};
 }

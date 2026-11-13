@@ -8,7 +8,7 @@ import {editorPembagian} from './blok-ui.js?v=8';
 import {bisaEdit,simpanSekarang} from './main.js?v=8';
 import {adalahBbm} from './bbm-model.js?v=8';
 import {norm,samaUnit} from './pengadaan-model.js?v=8';
-const button=(teks,fn)=>{const b=el('button',{type:'button',teks,onclick:async()=>{if(b.disabled)return;b.disabled=true;try{await fn();}finally{b.disabled=false;}}});return b;};
+const button=(teks,fn)=>{const b=el('button',{type:'button',teks,onclick:async()=>{if(b.disabled)return;b.disabled=true;try{await fn();}catch(err){pesan(err.message,'galat',8);}finally{b.disabled=false;}}});return b;};
 async function simpan(fn,repaint){fn();await simpanSekarang('Web: permintaan / stok opname');repaint();}
 const jejak=o=>el('details',{},[el('summary',{teks:'Jejak tindakan'}),...(o.jejak||[]).map(j=>el('p.bantuan',{teks:`${new Date(j.waktu).toLocaleString('id-ID')} · ${j.nama} · ${j.aksi}${j.alasan?' · '+j.alasan:''}`}))]);
 function formPermintaan(selesai,lama=null){
@@ -20,7 +20,8 @@ function formPermintaan(selesai,lama=null){
 }
 export function formKeluarBanyakBlok(selesai){
  const div=el('select',{},D.baris('master_divisi').filter(d=>norm(d.nama)!=='gudang'&&(P.punya('gudang')||P.cakupan(d.nama))).map(d=>el('option',{value:d.nama,teks:d.nama}))),tanggal=inputTanggal(),oleh=el('input',{type:'text'}),keperluan=el('input',{type:'text'}),edit=editorPembagian(()=>div.value);
- div.addEventListener('change',()=>edit.refresh());const p=panel('Material keluar banyak blok',el('div',{},[isian('Tanggal *',tanggal),isian('Divisi pemakai *',div),isian('Diambil oleh *',oleh),isian('Keperluan *',keperluan),edit.elemen]),[button('Catat penyerahan',async()=>{const it=W.susunItem(div.value,edit.ambil()),batch=crypto.randomUUID();if(adalahBbm(it))throw Error('Gunakan BBM Keluar atau penyerahan permintaan untuk BBM.');await simpan(()=>D.tambahBatchKeluar(it.alokasi.map(a=>({tanggal:tanggal.value,material:it.material,satuan:it.satuan,qty:a.diminta,blok:a.blok,divisi:div.value,diambil_oleh:oleh.value.trim(),keperluan:keperluan.value.trim(),batch_id:batch,luas_acuan_ha:a.luas_ha,mode_pembagian:it.mode}))),()=>{p.tutup();selesai();});})]);
+ const owner=el('select',{},[el('option',{value:'',teks:'Pilih pemilik stok…'}),el('option',{value:'Gudang',teks:'Gudang (stok bersama)'}),...D.baris('master_divisi').filter(d=>!['gudang','cabai'].includes(norm(d.nama))).map(d=>el('option',{value:d.nama,teks:d.nama}))]);
+ div.addEventListener('change',()=>edit.refresh());const p=panel('Material keluar banyak blok',el('div',{},[isian('Tanggal *',tanggal),isian('Divisi pemakai *',div),isian('Divisi pemilik stok *',owner),isian('Diambil oleh *',oleh),isian('Keperluan *',keperluan),edit.elemen]),[button('Catat penyerahan',async()=>{if(!owner.value)throw Error('Pilih divisi pemilik stok.');const it=W.susunItem(div.value,edit.ambil()),batch=crypto.randomUUID();if(adalahBbm(it))throw Error('Gunakan BBM Keluar atau penyerahan permintaan untuk BBM.');await simpan(()=>D.tambahBatchKeluar(it.alokasi.map(a=>({tanggal:tanggal.value,material:it.material,satuan:it.satuan,qty:a.diminta,blok:a.blok,divisi:div.value,pemilik_stok:owner.value,diambil_oleh:oleh.value.trim(),keperluan:keperluan.value.trim(),batch_id:batch,luas_acuan_ha:a.luas_ha,mode_pembagian:it.mode}))),()=>{p.tutup();selesai();});})]);
 }
 function detailPermintaan(o,repaint){
  const rows=W.rincian(o),jumlah=new Map(),isi=el('div',{},[el('p',{teks:`${o.nomor} · ${o.divisi} · ${o.pemohon.nama} · ${o.status}`}),el('p',{teks:o.keperluan})]);

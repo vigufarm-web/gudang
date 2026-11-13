@@ -29,6 +29,9 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
   const kDivisi = el('input',{type:'text',nilai:bbm?'Gudang':barisLama?.divisi||'Gudang',readonly:true});
   const kSumber = el('input', { type: 'text', nilai: barisLama?.sumber || '', placeholder: 'Supplier / asal barang' });
   const kSppb = el('select');
+  const kPemilik = el('select',{},[el('option',{value:'Gudang',teks:'Gudang (stok bersama)'}),...D.baris('master_divisi').filter(r=>!['gudang','cabai'].includes(kecil(r.nama))).map(r=>el('option',{value:r.nama,teks:r.nama}))]);
+  kPemilik.value=barisLama?.pemilik_stok||'Gudang';
+  const infoPemilik=el('p.bantuan');
   const kKet = el('textarea', { rows: 2 }, [barisLama?.keterangan || '']);
 
   function isiPilihanSppb() {
@@ -49,6 +52,8 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
     }
   }
   isiPilihanSppb();
+  const pemilikSppb=()=>{const it=kSppb.value&&D.cari('sppb_items',kSppb.value),s=it&&D.cari('sppb',it.sppb_id);if(s){if(!barisLama){kPemilik.value=kecil(s.divisi_pemohon)==='cabai'?'Gudang':s.divisi_pemohon;kPemilik.disabled=true;}infoPemilik.textContent='Divisi pemohon SPPB: '+s.divisi_pemohon+'.';}else{if(!barisLama)kPemilik.disabled=false;infoPemilik.textContent='Lokasi fisik di Gudang; pilih divisi pemilik.';}if(barisLama)infoPemilik.textContent+=' Riwayat lama tidak dialokasikan ulang saat koreksi.';};
+  kSppb.addEventListener('change',pemilikSppb);pemilikSppb();
   if(bbm)kMaterial.addEventListener('change',isiPilihanSppb);
 
   const simpan = async () => {
@@ -59,6 +64,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       satuan: P.admin() ? D.normalkanSatuan(kSatuan.value) : (D.masterDenganNama('master_satuan', kSatuan.value)?.nama || rapikan(kSatuan.value)),
       qty: Number(kQty.value),
       divisi: barisLama?.divisi||'Gudang',
+      ...(!bbm&&!barisLama?{pemilik_stok:kPemilik.value}:{}),
       sumber: rapikan(kSumber.value),
       sppb_item_id: kSppb.value ? Number(kSppb.value) : null,
       keterangan: rapikan(kKet.value),
@@ -85,7 +91,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
     else if(!ok)pesan('Belum tersimpan ke GitHub. Jangan tutup halaman; periksa pesan kesalahan dan coba Simpan.','awas',12);
   };
 
-  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}finally{sibuk=false;b.disabled=false;}} })];
+  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}catch(err){kosongkan(tempatGalat).append(kesalahan([err.message]));}finally{sibuk=false;b.disabled=false;}} })];
   if (barisLama) {
     if(P.admin())aksi.push(el('button.tombol-samar',{type:'button',teks:'Retur ke supplier',onclick:()=>formRetur(barisLama,()=>{p.tutup();saatSelesai();})}));
     aksi.unshift(el('button.tombol-bahaya', {
@@ -119,6 +125,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
     isian('Link ke SPPB lama / tanpa order (opsional)', kSppb, {
       bantuan: 'Hanya SPPB dengan material sama yang masih ada sisa. Kosongkan kalau tidak terkait SPPB.',
     }),
+    !bbm&&!barisLama?isian('Divisi pemilik stok',kPemilik):null,!bbm?infoPemilik:null,
     isian('Keterangan', kKet),
   ]), aksi);
 }
@@ -137,7 +144,7 @@ export async function halamanMasuk(wadah, bbm=false) {
         { l: 'Material', k: 'material' },
         { l: 'Qty', k: 'qty', jenis: 'angka', pecahan: 2, total: true },
         { l: 'Satuan', k: 'satuan' },
-        bbm?{l:'Lokasi stok',nilai:()=> 'Gudang'}:{ l: 'Divisi', k: 'divisi' },
+        {l:'Lokasi stok',nilai:()=> 'Gudang'},...(!bbm?[{l:'Pemilik tercatat',nilai:r=>r.pemilik_stok||'Riwayat lama'}]:[]),
         { l: 'Sumber', k: 'sumber' },
         {l:'No. order',nilai:r=>D.web().pesanan?.[r.order_id]?.nomor||'—'},
         { l: 'SPPB', nilai: (r) => D.nomorSppbDariItem(r.sppb_item_id) || '–' },

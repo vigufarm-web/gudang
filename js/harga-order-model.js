@@ -16,13 +16,21 @@ export function biayaFifo(d, normal, satuan) {
   const kelompok = new Map(), hasil = [];
   const key = r => `${normal(r.material)}|${satuan(r.satuan)}`;
   const masuk = d.tabel?.material_masuk || [], keluar = d.tabel?.material_keluar || [];
+  const items=new Map((d.tabel?.sppb_items||[]).map(r=>[String(r.id),r]));
+  const docs=new Map((d.tabel?.sppb||[]).map(r=>[String(r.id),r]));
+  const pemilik=(r,jenis)=>{
+    if(['solar','pertalite','pertamax'].includes(normal(r.material)))return 'gudang';
+    const item=jenis==='masuk'&&items.get(String(r.sppb_item_id));
+    const divisi=r.pemilik_stok||(item&&docs.get(String(item.sppb_id))?.divisi_pemohon)||r.divisi||'Gudang';
+    return normal(divisi)==='cabai'?'gudang':normal(divisi);
+  };
   const ret = Object.values(d.web?.returPenerimaan || {});
   const opname = Object.values(d.web?.stokOpname || {}).filter(o => o.status === 'Disetujui');
-  for (const r of [...masuk,...keluar]) {
-    const k=key(r); if(!kelompok.has(k)) kelompok.set(k,[]);
-    kelompok.get(k).push({jenis:masuk.includes(r)?'masuk':'keluar',r});
+  for(const [jenis,records] of [['masuk',masuk],['keluar',keluar]])for(const r of records){
+    const physical=key(r),k=physical+'|'+pemilik(r,jenis);if(!kelompok.has(k))kelompok.set(k,{physical,events:[]});
+    kelompok.get(k).events.push({jenis,r});
   }
-  for (const [k,events] of kelompok) {
+  for (const {physical:k,events} of kelompok.values()) {
     // Retur dan opname membutuhkan urutan yang tidak selalu tersedia pada data lama.
     const rumit=ret.some(r=>key(r)===k)||opname.some(o=>(o.items||[]).some(r=>key(r)===k));
     const tanggalHilang=events.some(e=>!/^\d{4}-\d{2}-\d{2}$/.test(e.r.tanggal||''));

@@ -31,6 +31,9 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
   const kQty = inputAngka(barisLama?.qty);
   const kBlok = inputMaster('master_blok', barisLama?.blok || '');
   const kDivisi = inputMaster('master_divisi', barisLama?.divisi || '');
+  const kPemilik=el('select',{},[el('option',{value:'',teks:'Pilih pemilik stok…'}),el('option',{value:'Gudang',teks:'Gudang (stok bersama)'}),...D.baris('master_divisi').filter(r=>!['gudang','cabai'].includes(rapikan(r.nama).toLowerCase())).map(r=>el('option',{value:r.nama,teks:r.nama}))]);
+  kPemilik.value=barisLama?.pemilik_stok||barisLama?.divisi||'';
+  const infoPemilik=el('small.bantuan');
   const blokBbm=bbm&&!barisLama?editorBlokBbm(kDivisi,kQty,{banyak:banyakBlok}):null;
   // saran nama pengambil dari riwayat, supaya ejaannya konsisten
   const idOleh = 'dlo' + Math.random().toString(36).slice(2, 9);
@@ -54,7 +57,9 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
     infoStok.textContent = baris
       ? `Stok gudang saat ini: ${angka(baris.stok, 2)} ${baris.satuan || ''}`
       : 'Material ini belum pernah tercatat masuk.';
+    if(!bbm&&kPemilik.value&&kSatuan.value){const audit=D.auditMilik(nama,kSatuan.value);infoPemilik.textContent=`Saldo milik ${kPemilik.value}: ${angka(D.saldoMilik(nama,kSatuan.value,kPemilik.value),2)} ${kSatuan.value}.${audit.perluDiperiksa?' Riwayat atau selisih opname perlu diperiksa.':''}`;}else infoPemilik.textContent='';
   }
+  kPemilik.addEventListener('change',tunjukkanStok);kSatuan.addEventListener('change',tunjukkanStok);
   tunjukkanStok();
   if(bbm)kMaterial.addEventListener('change',tunjukkanStok);
 
@@ -67,6 +72,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
       qty: Number(kQty.value),
       blok: blokBbm?'':await namaFinal('master_blok', kBlok.value, 'Blok'),
       divisi: await namaFinal('master_divisi', kDivisi.value, 'Divisi'),
+      ...(!bbm?{pemilik_stok:kPemilik.value}:{}),
       // nama pengambil: beda kapital disamakan dengan ejaan yang paling sering
       diambil_oleh: kanonikRiwayat(kOleh.value, D.baris('material_keluar').map((r) => r.diambil_oleh)),
       keterangan: rapikan(kKet.value),
@@ -79,6 +85,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
     if (!nilai.diambil_oleh) galat.push('"Diambil oleh" wajib diisi.');
     if(!nilai.divisi||nilai.divisi.toLowerCase()==='gudang')galat.push('Pilih divisi pemakai selain Gudang.');
+    if(!bbm&&!nilai.pemilik_stok)galat.push('Pilih divisi pemilik stok.');
     if(!nilai.keperluan)galat.push('Keperluan pemakaian wajib diisi.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
@@ -100,7 +107,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
     else if(!ok)pesan('Belum tersimpan ke GitHub. Jangan tutup halaman; periksa pesan kesalahan dan coba Simpan.','awas',12);
   };
 
-  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}finally{sibuk=false;b.disabled=false;}} })];
+  let sibuk=false;const aksi = [el('button.tombol-utama', { type: 'button', teks: 'Simpan', onclick:async(e)=>{if(sibuk)return;sibuk=true;e.currentTarget.disabled=true;const b=e.currentTarget;try{await simpan();}catch(err){kosongkan(tempatGalat).append(kesalahan([err.message]));}finally{sibuk=false;b.disabled=false;}} })];
   if (barisLama) {
     aksi.unshift(el('button.tombol-bahaya', {
       type: 'button', teks: P.admin()?'Hapus':'Ajukan hapus',
@@ -129,6 +136,7 @@ function formKeluar(barisLama, saatSelesai, bbm=false, banyakBlok=false) {
       isian('Satuan', kSatuan),
       isian('Divisi pemakai *', kDivisi),
     ]),
+    !bbm?isian('Divisi pemilik stok *',kPemilik,{bantuan:'Jika berbeda dari divisi pemakai, transaksi dicatat sebagai pemakaian lintas divisi.'}):null,!bbm?infoPemilik:null,
     blokBbm?blokBbm.elemen:isian('Blok / lokasi (opsional)', kBlok),
     isian('Diambil oleh *', kOleh),
     isian('Untuk keperluan apa? *',kPerlu),
@@ -155,6 +163,7 @@ export async function halamanKeluar(wadah, bbm=false) {
         { l: 'Satuan', k: 'satuan' },
         { l: 'Blok', k: 'blok' },
         { l: 'Divisi', k: 'divisi' },
+        ...(!bbm?[{l:'Pemilik stok',nilai:r=>r.pemilik_stok||`${r.divisi||'Gudang'} (riwayat)`}]:[]),
         { l: 'Diambil oleh', k: 'diambil_oleh' },
         { l:'Keperluan',k:'keperluan' },{l:'Kendaraan / alat',k:'unit_pemakai'},
         { l: 'Keterangan', k: 'keterangan' },
