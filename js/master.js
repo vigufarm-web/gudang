@@ -192,8 +192,7 @@ export async function halamanMaster(wadah, t) {
           ]),
           tempatTabel,
           el('p.bantuan', { style: 'margin-top:.7rem', teks:
-            'Nama baru yang diketik di form Material Masuk / Keluar / SPPB otomatis masuk '
-            + 'ke master ini — halaman ini untuk melihat, merapikan, atau menghapus daftarnya.' }),
+            t==='master_material' ? 'Tambahkan material baru di sini setelah memeriksa nama dan satuan stok; penerimaan dan order memilih material yang terdaftar.' : 'Gunakan halaman ini untuk melihat, merapikan, atau menghapus data master.' }),
         ]),
       ]),
     );

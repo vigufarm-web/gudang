@@ -3,6 +3,7 @@
 export const norm=v=>{const n=String(v||'').trim().toLowerCase();return /^prima[\s-]*quat$/.test(n)?'primaquat':n;};
 export function masterMaterial(rows,nama){
   const key=norm(nama),matches=(rows||[]).filter(r=>norm(r.nama)===key);
+  if(!key)return null;
   if(key==='primaquat')return matches.find(r=>String(r.nama||'').trim().toLowerCase()==='prima-quat')||matches[0]||null;
   return matches[0]||null;
 }
@@ -14,6 +15,13 @@ export const semuaPenerimaanLangsung=d=>Object.values(d.web?.penerimaanLangsung|
 export const returBaris=(d,id)=>Object.values(d.web?.returPenerimaan||{}).filter(r=>String(r.masuk_id)===String(id)).reduce((n,r)=>n+num(r.qty_stok),0);
 export const qtyBersih=(d,r)=>Math.max(0,num(r.qty)-returBaris(d,r.id));
 export const qtySppb=(d,r)=>num(r.qty_sppb??r.qty)*(num(r.qty)>0?qtyBersih(d,r)/num(r.qty):0);
+export function periksaNamaDatang(material,raw) {
+  const nama=String(raw.nama_barang_datang==null?material:raw.nama_barang_datang).trim();
+  if(!nama)throw Error('Nama barang yang diterima wajib diisi.');
+  if(nama.toLocaleLowerCase('id-ID')!==String(material||'').trim().toLocaleLowerCase('id-ID')&&raw.nama_barang_sama!==true)
+    throw Error('Nama barang yang datang berbeda dari material stok. Periksa spesifikasi dan centang konfirmasi jika benar barang yang sama.');
+  return nama;
+}
 export function ringkasOrder(d,o,kecuali=null) {
   const masuk=[...(d.tabel?.material_masuk||[]),...semuaPenerimaanLangsung(d)].filter(r=>r.order_id===o.id&&String(r.id)!==String(kecuali));
   const diterima=masuk.reduce((n,r)=>n+qtySppb(d,r),0);
@@ -31,9 +39,12 @@ export function ringkasItem(d,it,kecualiOrder=null) {
 export function susunOrder(d,raw,id) {
   const it=d.tabel.sppb_items.find(r=>Number(r.id)===Number(raw.sppb_item_id));
   if(!it)throw Error('Item SPPB tidak ditemukan.');
-  const bahan=norm(it.material)==='bbm'?raw.material_stok:it.material;
+  const bahan=String(raw.material_stok==null?it.material:raw.material_stok).trim();
   if(norm(it.material)==='bbm'&&!['pertalite','pertamax','solar'].includes(norm(bahan)))throw Error('SPPB BBM harus dirinci: pilih Pertalite, Pertamax atau Solar untuk order ini.');
   const master=masterMaterial(d.tabel.master_material,bahan);
+  if(!master)throw Error('Pilih material stok yang sudah ada di Master Material. Jika benar-benar baru, minta admin menambahkannya dahulu.');
+  if(norm(it.material)!=='bbm' && norm(master.nama)!==norm(it.material) && raw.sama_barang_disetujui!==true)
+    throw Error('Nama SPPB dan material stok berbeda. Pastikan barang dan spesifikasinya sama, lalu centang konfirmasi.');
   const o={...raw,id,sppb_item_id:it.id,material:master?.nama||bahan,satuan_sppb:it.satuan,
     satuan_stok:master?.satuan_default||it.satuan,qty_order:Number(raw.qty_order),
     faktor_order:samaUnit(raw.satuan_order,it.satuan)?1:(raw.faktor_order?Number(raw.faktor_order):null),
@@ -50,6 +61,10 @@ export function susunOrder(d,raw,id) {
 export function susunPenerimaan(d,raw,kecuali=null) {
   const o=d.web?.pesanan?.[raw.order_id];
   if(!o)throw Error('Order tidak ditemukan.');
+  const master=masterMaterial(d.tabel?.master_material,o.material);
+  if(kecuali==null&&!master)throw Error('Material order belum ada di Master Material. Minta petugas Order memilih material stok yang benar sebelum penerimaan.');
+  if(kecuali==null&&master?.satuan_default&&!samaUnit(master.satuan_default,o.satuan_stok))throw Error('Satuan stok pada order berbeda dari Master Material. Minta petugas Order memeriksa konversi sebelum penerimaan.');
+  const namaDatang=periksaNamaDatang(o.material,raw);
   const item=(d.tabel?.sppb_items||[]).find(x=>String(x.id)===String(o.sppb_item_id));
   const sppb=item&&(d.tabel?.sppb||[]).find(x=>String(x.id)===String(item.sppb_id));
   // Penerimaan lama tidak dialokasikan ulang saat dikoreksi; hanya penerimaan
@@ -68,7 +83,7 @@ export function susunPenerimaan(d,raw,kecuali=null) {
   else if(samaUnit(raw.satuan_terima,o.satuan_stok))basis=q/o.faktor_stok;
   else throw Error('Satuan penerimaan tidak sesuai order.');
   if(basis>ringkasOrder(d,o,kecuali).menunggu+1e-7&&!raw.alasan_lebih?.trim())throw Error('Penerimaan melebihi sisa order. Periksa jumlah atau isi alasan pengecualian.');
-  return {...raw,material:o.material,satuan:o.satuan_stok,qty:basis*o.faktor_stok,qty_sppb:basis,
+  return {...raw,nama_barang_datang:namaDatang,material:o.material,satuan:o.satuan_stok,qty:basis*o.faktor_stok,qty_sppb:basis,
     sppb_item_id:o.sppb_item_id,divisi:'Gudang',...(pemilik?{pemilik_stok:pemilik}:{}),sumber:supplierAktual,supplier_aktual:supplierAktual,
     snapshot_konversi:{faktor_order:o.faktor_order,faktor_stok:o.faktor_stok,satuan_order:o.satuan_order,satuan_sppb:o.satuan_sppb,satuan_stok:o.satuan_stok}};
 }

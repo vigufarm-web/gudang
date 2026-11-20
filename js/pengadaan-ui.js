@@ -4,6 +4,7 @@ import * as B from './pengadaan-model.js?v=8';
 import {hitungHargaOrder} from './harga-order-model.js';
 import {el,kosongkan,taruh,isian,tabel,panel,pesan,mintaTeks,hariIni,angka,tanggal} from './ui.js?v=8';
 import {bisaEdit,simpanSekarang} from './main.js?v=8';
+import {inputMaster} from './form-util.js?v=8';
 const jml=v=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:3}).format(Number(v)||0);
 const positif=v=>Number(v)>0?Number(v):null;
 const f=(nama,nilai='',type='text')=>el('input',{type,nilai,...(type==='number'?{step:'any',min:0}:{})});
@@ -15,7 +16,11 @@ export function formOrder(it,selesai,o=null,hargaSaja=false) {
   if(!bolehOrder(it))throw Error('Tidak memiliki hak order pada divisi ini.');
   const supplier=f('supplier',o?.supplier||''),tgl=f('',o?.tanggal||hariIni(),'date'),eta=f('',o?.eta||'','date');
   const qty=f('',o?.qty_order||'','number'),sat=f('',o?.satuan_order||it.satuan);
-  const faktor=f('',o?.faktor_order??1,'number'),stokUnit=D.satuanBawaan(it.material)||it.satuan;
+  const faktor=f('',o?.faktor_order??1,'number');
+  const materialStok=inputMaster('master_material',o?.material||D.masterDenganNama('master_material',it.material)?.nama||'',{tempat:'Pilih material yang sudah ada di master'});
+  const samaBarang=el('input',{type:'checkbox',checked:o?.sama_barang_disetujui===true});
+  const konfirmasiMaterial=el('div',{},[el('label',{},[samaBarang,' Saya sudah periksa: barang dan spesifikasinya sama dengan item SPPB.'])]);
+  let stokUnit=D.satuanBawaan(materialStok.value)||it.satuan;
   const faktorStok=f('',o?.faktor_stok??(B.samaUnit(stokUnit,it.satuan)?1:''),'number');
   const sumber=f('',o?.sumber_konversi||''),lebih=f('',o?.alasan_lebih||'');
   const cara=el('select',{},[el('option',{value:'satuan',teks:'Harga per satuan order'}),el('option',{value:'total',teks:'Harga total barang'})]);
@@ -28,7 +33,8 @@ export function formOrder(it,selesai,o=null,hargaSaja=false) {
   const jenis=B.norm(it.material)==='bbm'?el('select',{},[el('option',{value:'',teks:'Pilih jenis BBM…'}),...['Pertalite','Pertamax','Solar'].map(n=>el('option',{value:n,teks:n}))]):null;
   if(jenis)jenis.value=['Pertalite','Pertamax','Solar'].find(n=>B.norm(n)===B.norm(o?.material))||'';
   const density=f('','','number'),info=el('p.petunjuk'),galat=el('div',{role:'alert'});
-  const update=()=>{info.textContent=`1 ${sat.value||'satuan order'} = ${faktor.value||'?'} ${it.satuan}; 1 ${it.satuan} = ${faktorStok.value||'?'} ${stokUnit}. Total order setara ${positif(qty.value)&&positif(faktor.value)?jml(qty.value*faktor.value,3):'belum dapat dihitung'} ${it.satuan}.`;};
+  const update=()=>{konfirmasiMaterial.hidden=!!jenis||!materialStok.value||B.norm(materialStok.value)===B.norm(it.material);info.textContent=`Material stok: ${jenis?.value||materialStok.value||'belum dipilih'}. 1 ${sat.value||'satuan order'} = ${faktor.value||'?'} ${it.satuan}; 1 ${it.satuan} = ${faktorStok.value||'?'} ${stokUnit}. Total order setara ${positif(qty.value)&&positif(faktor.value)?jml(qty.value*faktor.value,3):'belum dapat dihitung'} ${it.satuan}.`;};
+  materialStok.addEventListener('change',()=>{stokUnit=D.satuanBawaan(materialStok.value)||it.satuan;faktorStok.value=B.samaUnit(stokUnit,it.satuan)?1:'';samaBarang.checked=false;update();});
   sat.addEventListener('input',()=>{faktor.value=B.samaUnit(sat.value,it.satuan)?1:'';update();});
   for(const inp of [qty,faktor,faktorStok])inp.addEventListener('input',update);
   density.addEventListener('input',()=>{const d=positif(density.value);if(!d)return;
@@ -38,22 +44,22 @@ export function formOrder(it,selesai,o=null,hargaSaja=false) {
   const form=el('form',{onsubmit:async(e)=>{e.preventDefault();if(sibuk)return;sibuk=true;tombol.disabled=true;galat.textContent='';try{
     const h=hitungHargaOrder({jumlah:qty.value,cara:cara.value,nilai:harga.value});
     if(statusOngkir.value==='terpisah'&&(ongkir.value===''||Number(ongkir.value)<0))throw Error('Isi ongkir terpisah dengan angka nol atau lebih.');
-    const raw={sppb_item_id:it.id,material_stok:jenis?.value,supplier:supplier.value.trim(),tanggal:tgl.value,eta:eta.value,qty_order:qty.value,satuan_order:sat.value.trim(),faktor_order:faktor.value,faktor_stok:faktorStok.value,sumber_konversi:sumber.value.trim(),alasan_lebih:lebih.value.trim(),harga_cara:cara.value,harga_nilai:harga.value===''?null:Number(harga.value),harga_total_barang:h.totalBarang,ongkir_status:statusOngkir.value,ongkir:statusOngkir.value==='terpisah'?Number(ongkir.value):null,keterangan_harga:ketHarga.value.trim()};
+    const raw={sppb_item_id:it.id,material_stok:jenis?.value||materialStok.value.trim(),sama_barang_disetujui:samaBarang.checked,supplier:supplier.value.trim(),tanggal:tgl.value,eta:eta.value,qty_order:qty.value,satuan_order:sat.value.trim(),faktor_order:faktor.value,faktor_stok:faktorStok.value,sumber_konversi:sumber.value.trim(),alasan_lebih:lebih.value.trim(),harga_cara:cara.value,harga_nilai:harga.value===''?null:Number(harga.value),harga_total_barang:h.totalBarang,ongkir_status:statusOngkir.value,ongkir:statusOngkir.value==='terpisah'?Number(ongkir.value):null,keterangan_harga:ketHarga.value.trim()};
     if(hargaSaja)D.ubahHargaPesanan(o.id,{harga_cara:raw.harga_cara,harga_nilai:raw.harga_nilai,harga_total_barang:raw.harga_total_barang,ongkir_status:raw.ongkir_status,ongkir:raw.ongkir,keterangan_harga:raw.keterangan_harga});else if(o)D.ubahPesanan(o.id,raw);else D.tambahPesanan(raw);
     await simpan('Web: pemesanan bertahap');p.tutup();selesai();
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
     el('p',{teks:`SPPB ${D.cari('sppb',it.sppb_id)?.no_sppb} · ${it.material} · kebutuhan ${jml(it.qty_diminta,3)} ${it.satuan}`}),
     o?el('p',{teks:o.nomor}):el('p.bantuan',{teks:'Nomor order unik dibuat otomatis. Satu item boleh memiliki beberapa order.'}),
-    jenis?isian('Jenis BBM untuk stok *',jenis):null,
+    jenis?isian('Jenis BBM untuk stok *',jenis):isian('Material stok dari master *',materialStok,{bantuan:'Pilih barang yang sama di master. Jika belum ada, minta admin menambahkannya; jangan memilih barang lain hanya karena namanya mirip.'}),konfirmasiMaterial,
     isian('Supplier *',supplier),el('div.baris-isian',{},[isian('Tanggal order *',tgl),isian('Perkiraan datang',eta)]),
     el('div.baris-isian',{},[isian('Jumlah order *',qty),isian('Satuan order *',sat)]),
     isian(`Konversi: 1 satuan order berapa ${it.satuan}?`,faktor,{bantuan:'Boleh kosong jika belum diketahui; penerimaan ditahan sampai konversi lengkap.'}),
-    !B.samaUnit(stokUnit,it.satuan)?isian(`1 ${it.satuan} berapa ${stokUnit} untuk stok?`,faktorStok):null,
+    isian(`Konversi 1 ${it.satuan} ke satuan stok`,faktorStok,{bantuan:'Otomatis 1 jika satuannya sama. Untuk satuan berbeda, periksa kemasan atau spesifikasi.'}),
     ['kg','liter'].includes(B.unit(it.satuan))?isian('Massa jenis kg/liter (opsional untuk kg ↔ liter)',density,{bantuan:'Isi hanya dari spesifikasi bahan yang diketahui, bukan anggapan 1 kg = 1 liter.'}):null,
     isian('Sumber konversi / massa jenis',sumber,{bantuan:'Misalnya isi label kemasan atau dokumen supplier. Disimpan pada order.'}),info,
     isian('Cara mengisi harga',cara),isian('Harga (Rp)',harga),infoHarga,isian('Ongkir',statusOngkir),isian('Ongkir terpisah untuk item ini (Rp)',ongkir),isian('Keterangan harga',ketHarga),
     isian('Alasan pengecualian jika melebihi kebutuhan',lebih),galat,tombol,
-  ]);if(hargaSaja){for(const i of [supplier,tgl,eta,qty,sat,faktor,faktorStok,sumber,lebih,density])i.disabled=true;if(jenis)jenis.disabled=true;form.prepend(el('p.petunjuk',{teks:'Koreksi harga menghitung ulang biaya FIFO pada laporan; riwayat sebelumnya dapat berubah.'}));}const p=panel(hargaSaja?'Koreksi harga':o?'Lengkapi / koreksi order':'Tambah order',form);update();updateHarga();
+  ]);if(hargaSaja){for(const i of [supplier,tgl,eta,qty,sat,faktor,faktorStok,sumber,lebih,density,materialStok,samaBarang])i.disabled=true;if(jenis)jenis.disabled=true;form.prepend(el('p.petunjuk',{teks:'Koreksi harga menghitung ulang biaya FIFO pada laporan; riwayat sebelumnya dapat berubah.'}));}const p=panel(hargaSaja?'Koreksi harga':o?'Lengkapi / koreksi order':'Tambah order',form);update();updateHarga();
 }
 
 export function formTerimaOrder(o,selesai,lama=null) {
@@ -62,22 +68,26 @@ export function formTerimaOrder(o,selesai,lama=null) {
   const qty=f('',lama?.qty_terima||'','number'),tgl=f('',lama?.tanggal||hariIni(),'date');
   const sat=el('select',{},[...new Set([o.satuan_order,o.satuan_sppb,o.satuan_stok])].map(s=>el('option',{value:s,teks:s})));sat.value=lama?.satuan_terima||o.satuan_order;
   const supplierAktual=f('',lama?.supplier_aktual||o.supplier||'');
+  const namaDatang=f('',lama?.nama_barang_datang||o.material||'');
+  const namaSama=el('input',{type:'checkbox',checked:lama?.nama_barang_sama===true});
+  const periksaNama=el('div',{},[el('label',{},[namaSama,' Saya telah memeriksa merek, jenis, dan spesifikasi: ini barang yang sama dengan stok tersebut.'])]);
   const lebih=f('',lama?.alasan_lebih||''),ket=el('textarea',{rows:2},[lama?.keterangan||'']),info=el('p.petunjuk'),galat=el('div',{role:'alert'});
   const tujuan=el('select',{},[el('option',{value:'gudang',teks:'Masuk ke Gudang'}),el('option',{value:'langsung',teks:'Diterima langsung di lokasi/divisi'})]);tujuan.value=lama?.langsung?'langsung':'gudang';if(lama)tujuan.disabled=true;
   const penerima=f('',lama?.penerima||''),lokasi=f('',lama?.lokasi_tujuan||'');
   const detailLangsung=el('div',{},[isian('Nama penerima *',penerima),isian('Lokasi / divisi penerima *',lokasi)]);
   const tampilTujuan=()=>{detailLangsung.hidden=tujuan.value!=='langsung';update();};
-  const update=()=>{try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,supplier_aktual:supplierAktual.value,alasan_lebih:lebih.value},lama?.id);const sisa=Math.max(0,(B.ringkasOrder(D.state.data,o,lama?.id).menunggu||0)-r.qty_sppb);const stok=tujuan.value==='langsung'?'Tidak menambah stok Gudang':`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}`;info.textContent=`Pemasok: ${r.supplier_aktual}. Diterima ${jml(qty.value)} ${sat.value} = ${jml(r.qty_sppb)} ${o.satuan_sppb} SPPB. ${stok}; sisa order ${jml(sisa)} ${o.satuan_sppb}.`; }catch(e){info.textContent=e.message.includes('Lengkapi konversi')?`Konversi belum lengkap. Satuan order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}. Minta petugas Order melengkapi konversi di Kantor Pusat / Order → Konversi / koreksi.`:e.message;}};
+  const update=()=>{periksaNama.hidden=namaDatang.value.trim().toLocaleLowerCase('id-ID')===String(o.material||'').trim().toLocaleLowerCase('id-ID');try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,supplier_aktual:supplierAktual.value,alasan_lebih:lebih.value,nama_barang_datang:namaDatang.value,nama_barang_sama:namaSama.checked},lama?.id);const sisa=Math.max(0,(B.ringkasOrder(D.state.data,o,lama?.id).menunggu||0)-r.qty_sppb);const stok=tujuan.value==='langsung'?'Tidak menambah stok Gudang':`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}`;info.textContent=`Pemasok: ${r.supplier_aktual}. Diterima ${jml(qty.value)} ${sat.value} = ${jml(r.qty_sppb)} ${o.satuan_sppb} SPPB. ${stok}; sisa order ${jml(sisa)} ${o.satuan_sppb}.`; }catch(e){info.textContent=e.message.includes('Lengkapi konversi')?`Konversi belum lengkap. Satuan order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}. Minta petugas Order melengkapi konversi di Kantor Pusat / Order → Konversi / koreksi.`:e.message;}};
+  namaDatang.addEventListener('input',()=>{namaSama.checked=false;update();});namaSama.addEventListener('change',update);
   for(const inp of [qty,sat,supplierAktual,lebih])inp.addEventListener('input',update);tujuan.addEventListener('change',tampilTujuan);
   const tombol=el('button.tombol-utama',{type:'submit',teks:lama?'Simpan koreksi penerimaan':'Catat penerimaan'});let sibuk=false;
   const form=el('form',{onsubmit:async(e)=>{e.preventDefault();if(sibuk)return;sibuk=true;tombol.disabled=true;galat.textContent='';try{
     if(!tgl.value)throw Error('Tanggal penerimaan wajib diisi.');
-    const raw={order_id:o.id,tanggal:tgl.value,qty_terima:Number(qty.value),satuan_terima:sat.value,supplier_aktual:supplierAktual.value.trim(),alasan_lebih:lebih.value.trim(),keterangan:ket.value.trim()};
+    const raw={order_id:o.id,tanggal:tgl.value,qty_terima:Number(qty.value),satuan_terima:sat.value,supplier_aktual:supplierAktual.value.trim(),nama_barang_datang:namaDatang.value.trim(),nama_barang_sama:namaSama.checked,alasan_lebih:lebih.value.trim(),keterangan:ket.value.trim()};
     if(tujuan.value==='langsung')D.simpanPenerimaanLangsung({...raw,penerima:penerima.value,lokasi_tujuan:lokasi.value},lama?.id||null);
     else if(lama)D.ubah('material_masuk',lama.id,raw);else D.tambah('material_masuk',raw);
     await simpan('Web: penerimaan order');p.tutup();selesai();
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
-    el('h3',{teks:o.nomor}),el('p',{teks:`${o.material} · Pemasok pada order: ${o.supplier}`}),el('p.bantuan',{teks:['solar','pertalite','pertamax'].includes(B.norm(o.material))?'BBM dicatat sebagai stok bersama Gudang.':`Divisi pemohon SPPB: ${sppb?.divisi_pemohon||'belum diketahui'}. Penerimaan ke Gudang dicatat untuk divisi tersebut; lokasi fisik tetap Gudang.`}),isian('Pemasok aktual (penjual) *',supplierAktual,{bantuan:'Jika pembelian berasal dari pemasok lain, petugas Order perlu koreksi atau membuat order baru sebelum penerimaan.'}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
+    el('h3',{teks:o.nomor}),el('p',{teks:`Material stok: ${o.material} · Pemasok pada order: ${o.supplier}`}),isian('Nama pada barang / dokumen *',namaDatang,{bantuan:'Ubah sesuai nama yang datang. Jika berbeda, periksa dahulu apakah merek, jenis dan spesifikasinya benar-benar sama.'}),periksaNama,el('p.bantuan',{teks:['solar','pertalite','pertamax'].includes(B.norm(o.material))?'BBM dicatat sebagai stok bersama Gudang.':`Divisi pemohon SPPB: ${sppb?.divisi_pemohon||'belum diketahui'}. Penerimaan ke Gudang dicatat untuk divisi tersebut; lokasi fisik tetap Gudang.`}),isian('Pemasok aktual (penjual) *',supplierAktual,{bantuan:'Jika pembelian berasal dari pemasok lain, petugas Order perlu koreksi atau membuat order baru sebelum penerimaan.'}),isian('Tujuan penerimaan',tujuan),detailLangsung,isian('Tanggal diterima *',tgl),
     el('div.baris-isian',{},[isian('Jumlah diterima *',qty),isian('Satuan diterima',sat)]),info,
     isian('Alasan jika penerimaan melebihi sisa order',lebih),isian('Keterangan / alasan koreksi',ket),galat,tombol,
   ]);const p=panel(lama?'Koreksi penerimaan':'Terima barang dari order',form);tampilTujuan();

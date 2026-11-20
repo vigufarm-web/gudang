@@ -2,7 +2,7 @@ import * as D from './data.js?v=8';
 import * as P from './pengguna.js?v=8';
 import * as B from './pengadaan-model.js?v=8';
 import {biayaFifo} from './harga-order-model.js';
-import {pisahBbm,susunLaporanPengadaan} from './ekspor-gudang-model.js?v=status-order-20261106';
+import {pisahBbm,susunLaporanPengadaan} from './ekspor-gudang-model.js?v=cek-material-20261120-2';
 import {S,GAYA,kolomHuruf,unduhXlsx} from './xlsx-tulis.js';
 import {el,isian,pesan} from './ui.js?v=8';
 
@@ -22,7 +22,7 @@ export function siapkanLaporan({dari='',sampai=''}={}){
  const keluar=pisahBbm(D.baris('material_keluar').filter(x=>inRange(x,dari,sampai)));
  const sppb=D.laporanSppb().filter(x=>inRange(x,dari,sampai)).map(x=>({...x,acc:D.statusAcc(x.id)}));const p=susunLaporanPengadaan(data,sppb);
  const c=(label,key,width)=>[label,r=>r[key],width];
- const ins=[c('Tanggal','tanggal',14),c('Material','material',30),c('Jumlah','qty',15),c('Satuan','satuan',14),['Retur',r=>B.returBaris(data,r.id),14],['Bersih',r=>B.qtyBersih(data,r),14],c('Sumber','sumber',24),['No. SPPB',r=>D.nomorSppbDariItem(r.sppb_item_id),18],['No. order',r=>data.web?.pesanan?.[r.order_id]?.nomor||'',18],c('Keterangan','keterangan',30)];
+ const ins=[c('Tanggal','tanggal',14),c('Material','material',30),c('Jumlah','qty',15),c('Satuan','satuan',14),['Retur',r=>B.returBaris(data,r.id),14],['Bersih',r=>B.qtyBersih(data,r),14],c('Nama pada barang','nama_barang_datang',30),c('Diperiksa oleh','nama_barang_diperiksa_oleh',22),c('Sumber','sumber',24),['No. SPPB',r=>D.nomorSppbDariItem(r.sppb_item_id),18],['No. order',r=>data.web?.pesanan?.[r.order_id]?.nomor||'',18],c('Keterangan','keterangan',30)];
  const outs=[c('Tanggal','tanggal',14),c('Material','material',30),c('Jumlah','qty',15),c('Satuan','satuan',14),c('Divisi','divisi',18),c('Blok','blok',18),c('Penerima','diambil_oleh',22),c('Keperluan','keperluan',30),c('Unit','unit_pemakai',24),c('Keterangan','keterangan',30)];
  const stocks=[c('Material','material',30),c('Kategori','kategori',20),c('Satuan','satuan',15),c('Masuk bersih','masuk',16),c('Penyesuaian','penyesuaian',21),c('Keluar','keluar',16),c('Stok saat ini','stok',18)];
  const ownership=[c('Material','material',30),c('Kategori','kategori',20),c('Satuan','satuan',15),c('Pemilik','divisi',18),c('Masuk','masuk',15),c('Keluar','keluar',15),c('Penyesuaian Gudang','opname_sementara',24),c('Saldo pemilik','stok',18),c('Pemeriksaan','status',22)];
@@ -31,7 +31,7 @@ export function siapkanLaporan({dari='',sampai=''}={}){
  const pemilikKeluar=[...outs.slice(0,5),['Pemilik',r=>r.pemilik_stok||(r.divisi?`${r.divisi} (riwayat)`:'Gudang sementara'),24],...outs.slice(5)];
  const items=[c('No. SPPB','nomor',20),c('Tanggal SPPB','tanggal',16),c('Divisi','divisi',18),c('Persetujuan','status_acc',20),c('Material','material',30),c('Satuan','satuan',14),c('Diminta','diminta',15),c('Diterima bersih','diterima',18),c('Menunggu datang','menunggu',18),c('Belum dipesan','belum_dipesan',18),c('Status order','status_order',34),c('Status penerimaan','status_item',20),['Dibatalkan',r=>r.dibatalkan?'Ya':'Tidak',14],c('Catatan','catatan',35)];
  const orders=[c('SPPB','sppb',20),c('No. order','nomor',22),c('Tanggal order','tanggal',16),c('Supplier','supplier',26),c('Material','material',30),c('Jumlah order','jumlah',16),c('Satuan order','satuan_order',16),c('Faktor konversi','faktor',18),c('Satuan SPPB','satuan_sppb',16),c('Total setara SPPB','total_sppb',20),c('Diterima','diterima',15),c('Menunggu','menunggu',15),['Ditutup',r=>r.ditutup?'Ya':'Tidak',14],c('Perkiraan tiba','perkiraan',18),c('Sumber konversi','konversi',25)];
- const receipts=[c('SPPB','sppb',20),c('No. order','order',20),c('Tanggal','tanggal',15),c('Material','material',30),c('Jumlah','jumlah',15),c('Satuan','satuan',14),c('Retur','retur',15),c('Bersih','bersih',15),c('Diterima satuan SPPB','jumlah_sppb',22),c('Satuan SPPB','satuan_sppb',16),c('Lokasi penerimaan','lokasi',20),c('Tujuan','tujuan',20)];
+ const receipts=[c('SPPB','sppb',20),c('No. order','order',20),c('Tanggal','tanggal',15),c('Material stok','material',30),c('Nama pada barang','nama_barang_datang',30),c('Diperiksa oleh','nama_barang_diperiksa_oleh',22),c('Jumlah','jumlah',15),c('Satuan','satuan',14),c('Retur','retur',15),c('Bersih','bersih',15),c('Diterima satuan SPPB','jumlah_sppb',22),c('Satuan SPPB','satuan_sppb',16),c('Lokasi penerimaan','lokasi',20),c('Tujuan','tujuan',20)];
  const biayaSheets=[];
  if(P.admin()){
   const rincian=biayaFifo(data,B.norm,B.unit).filter(x=>inRange(x.baris,dari,sampai));

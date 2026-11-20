@@ -10,7 +10,6 @@ export function simpanSppbBaru(header, items) {
   const pembuat = P.siapa();
   if (P.admin()) for (const it of items) {
     it.satuan = D.normalkanSatuan(it.satuan);
-    D.pastikanMaster('master_material', it.material, {satuan_default:it.satuan});
   }
   const s = D.tambah('sppb', {...header, divisi_pemohon:divisi.nama, dibuat_oleh:pembuat?.nama || '', dibuat_oleh_id:pembuat?.id || null, dibuat_ttd_versi:D.web().ttdPengguna?.[pembuat?.id]?.versi || null});
   for (const it of items) D.tambah('sppb_items', {sppb_id:s.id, ...it});

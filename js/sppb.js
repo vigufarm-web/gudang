@@ -11,7 +11,7 @@ import { daftarJejak } from './persetujuan.js?v=8';
 import {ringkasProgres,tahapMonitoring,cocokFilter} from './monitor-sppb.js?v=8';
 import {gambarUntukAcc,gambarUntukPembuat} from './ttd-model.js?v=pembuat-20261106';
 import {unduhLaporanSppb,cetakLaporanSppb} from './laporan-sppb.js?v=pdf-20261111';
-import {simpanSppbBaru} from './sppb-baru.js?v=master-20261110';
+import {simpanSppbBaru} from './sppb-baru.js?v=cek-material-20261120-2';
 
 const chipStatus = (st) => el('span.chip' + (
   st === 'Selesai' ? '.chip-ok' : st === 'Sebagian' ? '.chip-tunggu' : st === 'Belum Realisasi' ? '.chip-tolak' : ''
@@ -192,7 +192,6 @@ function formItem(sppbId, itemLama, saatSelesai) {
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     if (!await konfirmasiRevisi(sppbId, itemLama ? 'item ini diubah' : 'item baru ditambahkan')) return;
-    D.pastikanMaster('master_material', nilai.material, { satuan_default: nilai.satuan });
     if (itemLama) D.ubah('sppb_items', itemLama.id, nilai);
     else D.tambah('sppb_items', { sppb_id: sppbId, ...nilai });
     p.tutup();

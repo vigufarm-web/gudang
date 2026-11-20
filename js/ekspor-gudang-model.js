@@ -24,7 +24,7 @@ export function susunLaporanPengadaan(data, dokumen) {
         faktor:o.faktor_order,total_sppb:q.total,diterima:q.diterima,menunggu:q.menunggu,
         ditutup:!!o.ditutup,perkiraan:o.eta,konversi:o.sumber_konversi});
       for (const m of q.masuk) penerimaan.push({sppb:s.no_sppb,order:o.nomor||o.id,tanggal:m.tanggal,
-        material:m.material,jumlah:m.qty,satuan:m.satuan,retur:B.returBaris(data,m.id),
+        material:m.material,nama_barang_datang:m.nama_barang_datang||'',nama_barang_diperiksa_oleh:m.nama_barang_diperiksa_oleh||'',jumlah:m.qty,satuan:m.satuan,retur:B.returBaris(data,m.id),
         bersih:B.qtyBersih(data,m),jumlah_sppb:B.qtySppb(data,m),satuan_sppb:o.satuan_sppb,
         lokasi:m.langsung?'Langsung ke lokasi':'Gudang',tujuan:m.lokasi_tujuan||''});
     }

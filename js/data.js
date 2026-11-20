@@ -71,13 +71,13 @@ export function tambah(tabel, isi) {
   if(tabel==='material_keluar')assertGISBlockActive(state.data,'gudang',isi);
   if(tabel==='material_keluar'&&isi.permintaan_id)throw Error('Penyerahan permintaan wajib melalui detail permintaan.');
   if(tabel==='material_masuk'&&isi.order_id){const o=web().pesanan?.[isi.order_id],it=o&&cari('sppb_items',o.sppb_item_id);if(!it||statusAcc(it.sppb_id)!==STATUS_ACC.FULL)throw Error('SPPB order ini belum disetujui / sedang menunggu persetujuan ulang.');}
-  if(tabel==='material_masuk'&&isi.order_id){isi=B.susunPenerimaan(state.data,isi);if(!jenisBbm(isi.material)&&!isi.pemilik_stok)throw Error('Divisi pemohon SPPB belum tercatat. Periksa SPPB sebelum menerima barang.');}
+  if(tabel==='material_masuk'&&isi.order_id){isi=B.susunPenerimaan(state.data,isi);if(isi.nama_barang_sama)isi.nama_barang_diperiksa_oleh=namaPengisi();if(!jenisBbm(isi.material)&&!isi.pemilik_stok)throw Error('Divisi pemohon SPPB belum tercatat. Periksa SPPB sebelum menerima barang.');}
   if(tabel==='material_masuk'&&!isi.order_id){
     if(!jenisBbm(isi.material)){
       const item=isi.sppb_item_id&&cari('sppb_items',isi.sppb_item_id),sppb=item&&cari('sppb',item.sppb_id);
       isi={...isi,pemilik_stok:namaPemilik(sppb?.divisi_pemohon||isi.pemilik_stok)};
     }
-    isi={...isi,divisi:'Gudang'};validasiMasukBiasa(isi);
+    isi={...isi,divisi:'Gudang'};validasiMasukBiasa(isi);if(isi.nama_barang_sama)isi.nama_barang_diperiksa_oleh=namaPengisi();
   }
   if(tabel==='material_keluar')validasiPengeluaran(isi);
   P.jagaTransaksi('tambah', tabel, null, isi);
@@ -99,8 +99,9 @@ export function ubah(tabel, id, tambalan) {
   if(tabel==='material_masuk'&&r.order_id) {
     if(B.returBaris(state.data,id)>0)throw Error('Penerimaan ini sudah memiliki retur. Jangan ubah catatan asal.');
     tambalan=B.susunPenerimaan(state.data,{...r,...tambalan},id);
+    tambalan.nama_barang_diperiksa_oleh=tambalan.nama_barang_sama?namaPengisi():'';
   }
-  if(tabel==='material_masuk'&&!r.order_id){if(B.returBaris(state.data,id)>0)throw Error('Penerimaan yang sudah diretur tidak boleh diubah.');validasiMasukBiasa({...r,...tambalan});}
+  if(tabel==='material_masuk'&&!r.order_id){if(B.returBaris(state.data,id)>0)throw Error('Penerimaan yang sudah diretur tidak boleh diubah.');validasiMasukBiasa({...r,...tambalan},r);if('nama_barang_sama' in tambalan)tambalan.nama_barang_diperiksa_oleh=tambalan.nama_barang_sama?namaPengisi():'';}
   if(tabel==='material_keluar')validasiPengeluaran({...r,...tambalan},id);
   P.jagaTransaksi('ubah', tabel, r, {...r,...tambalan});
   if(tabel==='material_masuk'||tabel==='material_keluar')catatMutasi('Koreksi transaksi',tabel,id,{sebelum:{...r},sesudah:{...r,...tambalan}});
@@ -481,7 +482,7 @@ export function simpanPenerimaanLangsung(raw,id=null) {
   if(lama&&lama.order_id!==raw.order_id)throw Error('Order penerimaan tidak boleh diganti.');
   if(!/^\d{4}-\d{2}-\d{2}$/.test(raw.tanggal||'')||!raw.penerima?.trim()||!raw.lokasi_tujuan?.trim())throw Error('Tanggal, nama penerima dan lokasi/divisi tujuan wajib diisi.');
   const nilai=B.susunPenerimaan(state.data,raw,id),key=id||crypto.randomUUID();
-  const baru={...nilai,id:key,langsung:true,penerima:raw.penerima.trim(),lokasi_tujuan:raw.lokasi_tujuan.trim(),oleh:namaPengisi(),waktu:new Date().toISOString()};
+  const baru={...nilai,id:key,langsung:true,penerima:raw.penerima.trim(),lokasi_tujuan:raw.lokasi_tujuan.trim(),oleh:namaPengisi(),...(nilai.nama_barang_sama?{nama_barang_diperiksa_oleh:namaPengisi()}:{}),waktu:new Date().toISOString()};
   (web().penerimaanLangsung ||= {})[key]=baru;
   catatMutasi(id?'Koreksi penerimaan langsung':'Penerimaan langsung','penerimaanLangsung',key,id?{sebelum:lama,sesudah:baru}:{});tandaiBerubah();return baru;
 }
@@ -516,10 +517,12 @@ function validasiPengeluaran(r,kecuali=null) {
     if(Number(r.qty)>saldoMilik(r.material,r.satuan,owner)+dikembalikan+1e-7)throw Error(`Stok milik ${owner} tidak cukup. Periksa saldo dan riwayat sebelum pengeluaran.`);
   }
 }
-function validasiMasukBiasa(r) {
+function validasiMasukBiasa(r,lama=null) {
   if(!(Number(r.qty)>0)||!Number.isFinite(Number(r.qty)))throw Error('Jumlah penerimaan harus positif.');
   if(jenisBbm(r.material)&&!B.samaUnit(r.satuan,'Liter'))throw Error('Penerimaan BBM harus memakai liter.');
   if(B.norm(r.material)==='bbm')throw Error('Penerimaan BBM harus memilih Pertalite, Pertamax atau Solar. SPPB lama bertuliskan BBM dapat dirinci jenisnya saat menambah order.');
+  if(!masterDenganNama('master_material',r.material)&&(!lama||B.norm(lama.material)!==B.norm(r.material)))throw Error('Pilih material yang sudah terdaftar di Master Material. Jika benar-benar baru, minta admin menambahkannya dahulu.');
+  B.periksaNamaDatang(r.material,r);
   const acuan=satuanBawaan(r.material);
   if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Penerimaan harus dicatat dalam ${acuan}, atau melalui order dengan konversi satuan.`);
   if(r.sppb_item_id) {

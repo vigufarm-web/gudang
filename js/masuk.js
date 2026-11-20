@@ -33,6 +33,12 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
   kPemilik.value=barisLama?.pemilik_stok||'Gudang';
   const infoPemilik=el('p.bantuan');
   const kKet = el('textarea', { rows: 2 }, [barisLama?.keterangan || '']);
+  const namaDatang=el('input',{type:'text',nilai:barisLama?.nama_barang_datang||'',placeholder:'Kosongkan jika sama dengan nama stok'});
+  const namaSama=el('input',{type:'checkbox',checked:barisLama?.nama_barang_sama===true});
+  const verifikasi=el('div',{},[el('label',{},[namaSama,' Saya telah memeriksa merek, jenis, dan spesifikasi: ini barang yang sama dengan material stok.'])]);
+  const tampilVerifikasi=()=>{verifikasi.hidden=!namaDatang.value.trim()||kecil(namaDatang.value)===kecil(kMaterial.value);};
+  namaDatang.addEventListener('input',()=>{namaSama.checked=false;tampilVerifikasi();});
+  kMaterial.addEventListener('change',()=>{namaSama.checked=false;tampilVerifikasi();});tampilVerifikasi();
 
   function isiPilihanSppb() {
     const materi = rapikan(kMaterial.value);
@@ -61,7 +67,7 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       tanggal: kTanggal.value,
       // anti-dobel: ejaan mengikuti master; nama baru yang mirip ditanyakan dulu
       material: await namaFinal('master_material', kMaterial.value, 'Material'),
-      satuan: P.admin() ? D.normalkanSatuan(kSatuan.value) : (D.masterDenganNama('master_satuan', kSatuan.value)?.nama || rapikan(kSatuan.value)),
+      satuan: D.satuanMenurutMaterial(kMaterial.value,kSatuan.value) || (D.masterDenganNama('master_satuan', kSatuan.value)?.nama || rapikan(kSatuan.value)),
       qty: Number(kQty.value),
       divisi: barisLama?.divisi||'Gudang',
       ...(!bbm&&!barisLama?{pemilik_stok:kPemilik.value}:{}),
@@ -69,18 +75,17 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       sppb_item_id: kSppb.value ? Number(kSppb.value) : null,
       keterangan: rapikan(kKet.value),
     };
+    if(!bbm){nilai.nama_barang_datang=rapikan(namaDatang.value)||nilai.material;nilai.nama_barang_sama=namaSama.checked;}
     const galat = [];
     if (!nilai.tanggal) galat.push('Tanggal wajib diisi.');
     if (!nilai.material) galat.push('Material wajib diisi.');
     if(!bbm&&adalahBbm(nilai))galat.push('Catat transaksi BBM melalui menu BBM Masuk.');
     if (!(nilai.qty > 0)) galat.push('Qty harus lebih dari 0.');
-    if (!P.admin() && nilai.material && !D.masterDenganNama('master_material', nilai.material)) galat.push('Material belum ada di Master Material. Minta admin menambahkannya sebelum mencatat penerimaan manual, atau terima melalui order SPPB.');
+    if (nilai.material && !D.masterDenganNama('master_material', nilai.material) && (!barisLama||kecil(barisLama.material)!==kecil(nilai.material))) galat.push('Pilih material yang sudah ada di Master Material. Jika benar-benar baru, minta admin menambahkannya dahulu.');
     if (!P.admin() && nilai.satuan && !D.masterDenganNama('master_satuan', nilai.satuan)) galat.push('Satuan belum ada di Master Satuan. Minta admin menambahkannya sebelum mencatat penerimaan manual, atau terima melalui order SPPB.');
     kosongkan(tempatGalat);
     if (galat.length) { tempatGalat.append(kesalahan(galat)); return; }
     P.jagaTransaksi(barisLama ? 'ubah' : 'tambah','material_masuk',barisLama,{...barisLama,...nilai});
-    D.pastikanMaster('master_material', nilai.material, { satuan_default: nilai.satuan });
-    if (nilai.divisi) D.pastikanMaster('master_divisi', nilai.divisi);
     if (barisLama) D.ubah('material_masuk', barisLama.id, nilai);
     else D.tambah('material_masuk', nilai);
     p.tutup();
@@ -115,7 +120,9 @@ function formMasuk(barisLama, saatSelesai, bbm=false) {
       isian('Tanggal *', kTanggal),
       isian(bbm?'Jumlah liter *':'Qty *', kQty),
     ]),
-    isian(bbm?'Jenis BBM *':'Material *', kMaterial, { bantuan: bbm?'Solar, Pertalite dan Pertamax dicatat terpisah dalam liter.':P.admin()?'Nama baru otomatis masuk ke Master Material.':'Penerimaan manual memakai material dan satuan yang sudah ada di master.' }),
+    isian(bbm?'Jenis BBM *':'Material stok dari master *', kMaterial, { bantuan: bbm?'Solar, Pertalite dan Pertamax dicatat terpisah dalam liter.':'Pilih material yang sudah terdaftar. Jika belum ada, minta admin menambahkannya dahulu.' }),
+    !bbm?isian('Nama pada barang / dokumen',namaDatang,{bantuan:'Isi jika penulisannya berbeda dari nama stok. Jangan pilih barang lain hanya karena namanya mirip.'}):null,
+    !bbm?verifikasi:null,
     el('div.baris-isian', {}, [
       isian('Satuan', kSatuan),
       isian('Lokasi stok', kDivisi),
