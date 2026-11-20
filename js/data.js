@@ -80,6 +80,10 @@ export function tambah(tabel, isi) {
     isi={...isi,divisi:'Gudang'};validasiMasukBiasa(isi);if(isi.nama_barang_sama)isi.nama_barang_diperiksa_oleh=namaPengisi();
   }
   if(tabel==='material_keluar')validasiPengeluaran(isi);
+  if(tabel==='master_material'){
+    if(!String(isi.nama||'').trim()||!String(isi.satuan_default||'').trim())throw Error('Nama dan satuan stok material wajib diisi.');
+    if(masterDenganNama('master_material',isi.nama))throw Error('Material sudah ada di master. Pilih material yang ada dan periksa spesifikasinya.');
+  }
   P.jagaTransaksi('tambah', tabel, null, isi);
   const r = { id: idBaru(tabel), ...isi };
   baris(tabel).push(r);
@@ -456,6 +460,19 @@ export function ubahPesanan(id,raw) {
   const baru=B.susunOrder(state.data,{...o,...raw,nomor:o.nomor,sppb_item_id:o.sppb_item_id},id);
   web().pesanan[id]=baru;catatMutasi('Koreksi order','pesanan',id,{sebelum:o,sesudah:baru});tandaiBerubah();
 }
+export function lengkapiKonversi(id,raw) {
+  if(!P.punya('konversi_satuan'))throw Error('Tidak memiliki hak melengkapi konversi.');
+  const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');
+  if(o.ditutup||B.ringkasOrder(state.data,o).masuk.length)throw Error('Order sudah diterima atau ditutup; minta petugas order menangani sisa order.');
+  const master=masterDenganNama('master_material',o.material);
+  if(!master||!B.samaUnit(master.satuan_default||o.satuan_sppb,o.satuan_stok))throw Error('Material atau satuan stok order tidak sesuai master. Minta petugas order memperbaiki order terlebih dahulu.');
+  const perubahan={faktor_order:raw.faktor_order,faktor_stok:raw.faktor_stok,sumber_konversi:String(raw.sumber_konversi||'').trim()};
+  const uji=B.susunOrder(state.data,{...o,...perubahan,material_stok:o.material},id);
+  if(!(uji.faktor_order>0&&uji.faktor_stok>0))throw Error('Lengkapi kedua faktor konversi dengan angka lebih dari nol.');
+  const sebelum={faktor_order:o.faktor_order,faktor_stok:o.faktor_stok,sumber_konversi:o.sumber_konversi};
+  const sesudah={faktor_order:uji.faktor_order,faktor_stok:uji.faktor_stok,sumber_konversi:perubahan.sumber_konversi};
+  Object.assign(o,sesudah);catatMutasi('Lengkapi konversi','pesanan',id,{sebelum,sesudah});tandaiBerubah();
+}
 export function ubahHargaPesanan(id,harga) {
   const o=web().pesanan?.[id];if(!o)throw Error('Order tidak ditemukan.');P.jagaOrder(o.sppb_item_id);
   const nilai=harga.harga_total_barang;
@@ -521,7 +538,7 @@ function validasiMasukBiasa(r,lama=null) {
   if(!(Number(r.qty)>0)||!Number.isFinite(Number(r.qty)))throw Error('Jumlah penerimaan harus positif.');
   if(jenisBbm(r.material)&&!B.samaUnit(r.satuan,'Liter'))throw Error('Penerimaan BBM harus memakai liter.');
   if(B.norm(r.material)==='bbm')throw Error('Penerimaan BBM harus memilih Pertalite, Pertamax atau Solar. SPPB lama bertuliskan BBM dapat dirinci jenisnya saat menambah order.');
-  if(!masterDenganNama('master_material',r.material)&&(!lama||B.norm(lama.material)!==B.norm(r.material)))throw Error('Pilih material yang sudah terdaftar di Master Material. Jika benar-benar baru, minta admin menambahkannya dahulu.');
+  if(!masterDenganNama('master_material',r.material)&&(!lama||B.norm(lama.material)!==B.norm(r.material)))throw Error('Pilih material di Master Material. Jika benar-benar barang baru, petugas yang berwenang dapat menambahkannya di menu Material.');
   B.periksaNamaDatang(r.material,r);
   const acuan=satuanBawaan(r.material);
   if(acuan&&!B.samaUnit(acuan,r.satuan))throw Error(`Penerimaan harus dicatat dalam ${acuan}, atau melalui order dengan konversi satuan.`);

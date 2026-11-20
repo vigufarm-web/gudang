@@ -50,7 +50,7 @@ export function formOrder(it,selesai,o=null,hargaSaja=false) {
   }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
     el('p',{teks:`SPPB ${D.cari('sppb',it.sppb_id)?.no_sppb} · ${it.material} · kebutuhan ${jml(it.qty_diminta,3)} ${it.satuan}`}),
     o?el('p',{teks:o.nomor}):el('p.bantuan',{teks:'Nomor order unik dibuat otomatis. Satu item boleh memiliki beberapa order.'}),
-    jenis?isian('Jenis BBM untuk stok *',jenis):isian('Material stok dari master *',materialStok,{bantuan:'Pilih barang yang sama di master. Jika belum ada, minta admin menambahkannya; jangan memilih barang lain hanya karena namanya mirip.'}),konfirmasiMaterial,
+    jenis?isian('Jenis BBM untuk stok *',jenis):isian('Material stok dari master *',materialStok,{bantuan:'Cari barang dan periksa spesifikasinya. Jika benar-benar belum ada, petugas berwenang dapat menambahkannya di menu Material; jangan memilih barang lain hanya karena namanya mirip.'}),konfirmasiMaterial,
     isian('Supplier *',supplier),el('div.baris-isian',{},[isian('Tanggal order *',tgl),isian('Perkiraan datang',eta)]),
     el('div.baris-isian',{},[isian('Jumlah order *',qty),isian('Satuan order *',sat)]),
     isian(`Konversi: 1 satuan order berapa ${it.satuan}?`,faktor,{bantuan:'Boleh kosong jika belum diketahui; penerimaan ditahan sampai konversi lengkap.'}),
@@ -76,7 +76,7 @@ export function formTerimaOrder(o,selesai,lama=null) {
   const penerima=f('',lama?.penerima||''),lokasi=f('',lama?.lokasi_tujuan||'');
   const detailLangsung=el('div',{},[isian('Nama penerima *',penerima),isian('Lokasi / divisi penerima *',lokasi)]);
   const tampilTujuan=()=>{detailLangsung.hidden=tujuan.value!=='langsung';update();};
-  const update=()=>{periksaNama.hidden=namaDatang.value.trim().toLocaleLowerCase('id-ID')===String(o.material||'').trim().toLocaleLowerCase('id-ID');try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,supplier_aktual:supplierAktual.value,alasan_lebih:lebih.value,nama_barang_datang:namaDatang.value,nama_barang_sama:namaSama.checked},lama?.id);const sisa=Math.max(0,(B.ringkasOrder(D.state.data,o,lama?.id).menunggu||0)-r.qty_sppb);const stok=tujuan.value==='langsung'?'Tidak menambah stok Gudang':`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}`;info.textContent=`Pemasok: ${r.supplier_aktual}. Diterima ${jml(qty.value)} ${sat.value} = ${jml(r.qty_sppb)} ${o.satuan_sppb} SPPB. ${stok}; sisa order ${jml(sisa)} ${o.satuan_sppb}.`; }catch(e){info.textContent=e.message.includes('Lengkapi konversi')?`Konversi belum lengkap. Satuan order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}. Minta petugas Order melengkapi konversi di Kantor Pusat / Order → Konversi / koreksi.`:e.message;}};
+  const update=()=>{periksaNama.hidden=namaDatang.value.trim().toLocaleLowerCase('id-ID')===String(o.material||'').trim().toLocaleLowerCase('id-ID');try{const r=B.susunPenerimaan(D.state.data,{order_id:o.id,qty_terima:qty.value,satuan_terima:sat.value,supplier_aktual:supplierAktual.value,alasan_lebih:lebih.value,nama_barang_datang:namaDatang.value,nama_barang_sama:namaSama.checked},lama?.id);const sisa=Math.max(0,(B.ringkasOrder(D.state.data,o,lama?.id).menunggu||0)-r.qty_sppb);const stok=tujuan.value==='langsung'?'Tidak menambah stok Gudang':`Stok Gudang bertambah ${jml(r.qty,3)} ${r.satuan}`;info.textContent=`Pemasok: ${r.supplier_aktual}. Diterima ${jml(qty.value)} ${sat.value} = ${jml(r.qty_sppb)} ${o.satuan_sppb} SPPB. ${stok}; sisa order ${jml(sisa)} ${o.satuan_sppb}.`; }catch(e){info.textContent=e.message.includes('Lengkapi konversi')?`Konversi belum lengkap. Order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}. Tutup formulir ini lalu pilih Lengkapi konversi pada Barang ditunggu; periksa isi kemasan atau tanyakan pemasok.`:e.message;}};
   namaDatang.addEventListener('input',()=>{namaSama.checked=false;update();});namaSama.addEventListener('change',update);
   for(const inp of [qty,sat,supplierAktual,lebih])inp.addEventListener('input',update);tujuan.addEventListener('change',tampilTujuan);
   const tombol=el('button.tombol-utama',{type:'submit',teks:lama?'Simpan koreksi penerimaan':'Catat penerimaan'});let sibuk=false;
@@ -99,6 +99,23 @@ export async function formRetur(m,selesai) {
   D.returPenerimaan(m.id,Number(q.replace(',','.')),alasan);await simpan('Web: retur supplier');selesai();
 }
 
+function formKonversi(o,selesai) {
+  const fo=f('',o.faktor_order??(B.samaUnit(o.satuan_order,o.satuan_sppb)?1:''),'number');
+  const fs=f('',o.faktor_stok??(B.samaUnit(o.satuan_sppb,o.satuan_stok)?1:''),'number');
+  const sumber=f('',o.sumber_konversi||''),galat=el('p.galat');
+  if(B.samaUnit(o.satuan_order,o.satuan_sppb))fo.disabled=true;
+  if(B.samaUnit(o.satuan_sppb,o.satuan_stok))fs.disabled=true;
+  const tombol=el('button.tombol-utama',{type:'submit',teks:'Simpan konversi'});let sibuk=false;
+  const form=el('form',{onsubmit:async e=>{e.preventDefault();if(sibuk)return;sibuk=true;tombol.disabled=true;try{
+    D.lengkapiKonversi(o.id,{faktor_order:fo.value,faktor_stok:fs.value,sumber_konversi:sumber.value});
+    await simpan('Web: lengkapi konversi satuan');p.tutup();selesai();
+  }catch(err){galat.textContent=err.message;}finally{sibuk=false;tombol.disabled=false;}}},[
+    el('p',{teks:`${o.nomor} · ${o.material}. Order: ${o.satuan_order}; SPPB: ${o.satuan_sppb}; stok: ${o.satuan_stok}.`}),
+    el('p.bantuan',{teks:'Isi hanya jika satuan berbeda. Contoh: 1 sak = 50 kg, isi 50. Periksa label kemasan atau tanyakan pemasok; jangan menebak hubungan kg dan liter. Ltr dan Liter otomatis sama.'}),
+    isian(`1 ${o.satuan_order} = berapa ${o.satuan_sppb}?`,fo),isian(`1 ${o.satuan_sppb} = berapa ${o.satuan_stok}?`,fs),
+    isian('Sumber konversi',sumber,{bantuan:'Wajib bila satuan berbeda; misalnya label kemasan atau informasi pemasok.'}),galat,tombol]);
+  const p=panel('Lengkapi konversi satuan',form);
+}
 export async function halamanPengadaan(wadah,ditunggu=false) {
   let cari='';const konten=el('div'),input=el('input',{type:'search',placeholder:'Cari nomor order, SPPB, material, supplier…','aria-label':'Cari order',oninput:e=>{cari=B.norm(e.target.value);gambar();}});
   const gambar=()=>{
@@ -108,6 +125,7 @@ export async function halamanPengadaan(wadah,ditunggu=false) {
       .filter(o=>!ditunggu||!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>1e-7)).sort((a,b)=>String(b.tanggal).localeCompare(a.tanggal));
     const aksi=o=>el('div',{style:'display:flex;gap:5px;flex-wrap:wrap'},[
       bolehTerima()&&!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>0)?el('button.tombol-kecil',{teks:'Terima barang',onclick:()=>formTerimaOrder(o,gambar)}):null,
+      bisaEdit()&&P.punya('konversi_satuan')&&!o.r.masuk.length&&!o.ditutup?el('button.tombol-kecil.tombol-samar',{teks:'Lengkapi konversi',onclick:()=>formKonversi(o,gambar)}):null,
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))&&!o.r.masuk.length&&!o.ditutup?el('button.tombol-kecil.tombol-samar',{teks:'Konversi / koreksi',onclick:()=>formOrder(D.cari('sppb_items',o.sppb_item_id),gambar,o)}):null,
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))?el('button.tombol-kecil.tombol-samar',{teks:'Harga',onclick:()=>formOrder(D.cari('sppb_items',o.sppb_item_id),gambar,o,true)}):null,
       bolehOrder(D.cari('sppb_items',o.sppb_item_id))&&!o.ditutup&&(o.r.menunggu==null||o.r.menunggu>0)?el('button.tombol-kecil.tombol-samar',{teks:'Tutup sisa',onclick:async()=>{const alasan=await mintaTeks('Tutup sisa order','Sisa yang dibatalkan tidak dianggap diterima.',{label:'Alasan',wajib:true});if(alasan!=null){D.tutupSisaOrder(o.id,alasan);await simpan('Web: tutup sisa order');gambar();}}}):null,

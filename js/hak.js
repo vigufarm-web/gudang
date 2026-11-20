@@ -8,6 +8,7 @@ export const HAK = [
   ['gudang', 'Kelola stok Gudang dan pemakaian semua divisi'], ['bbm','Akses BBM masuk dan keluar'],
   ['laporan','Buat dan salin Laporan WA'],
   ['ekspor','Unduh Excel laporan Gudang lengkap'],
+  ['master_material_tambah','Tambah master material'], ['konversi_satuan','Lengkapi konversi satuan order'],
 ];
 export const mandor=p=>!!p&&!p.admin&&(p.peran==='mandor'||(p.hak?.minta===true&&!['sppb','input','revisi','kepala','ktu','gudang','order','opname','bbm'].some(k=>p.hak?.[k])));
 export const punya = (p, hak) => p?.aktif !== false && !!p && (p.admin === true || ((!mandor(p)||hak==='minta')&&p.hak?.[hak] === true));
@@ -33,7 +34,7 @@ export function bolehHalaman(p, halaman) {
 export function bolehTransaksi(p, aksi, tabel, lama, baru, cariSppb) {
   if (!p || p.aktif === false) return false;
   if (p.admin) return true;
-  if (tabel.startsWith('master_')) return false;
+  if (tabel.startsWith('master_')) return tabel === 'master_material' && aksi === 'tambah' && punya(p,'master_material_tambah');
   const isBBM=(r)=>['solar','pertalite','pertamax','bbm'].includes(normal(r?.material));
   if (['material_masuk','material_keluar'].includes(tabel) && (isBBM(lama)||isBBM(baru)) && !punya(p,'bbm')) return false;
   const buatSppb = aksi === 'tambah' && ['sppb','sppb_items'].includes(tabel) && punya(p,'sppb');

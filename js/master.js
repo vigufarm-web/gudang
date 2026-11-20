@@ -17,7 +17,7 @@ export const MASTER = {
     sub: 'Nama material, satuan default, dan kategorinya',
     f: [
       { k: 'nama', l: 'Nama material', t: 'text', wajib: true, unik: true },
-      { k: 'satuan_default', l: 'Satuan default', t: 'datalist', sumber: 'master_satuan' },
+      { k: 'satuan_default', l: 'Satuan stok', t: 'datalist', sumber: 'master_satuan', wajib: true },
       { k: 'kategori', l: 'Kategori', t: 'datalist', sumber: 'master_kategori' },
     ],
     kolom: [
@@ -116,8 +116,8 @@ function formMaster(t, def, barisLama, saatSelesai) {
         + 'yang sudah terdaftar. Yakin ini memang nama yang BERBEDA, bukan typo?',
         { ya: 'Ya, memang beda', tidak: 'Batal, periksa lagi' })) return;
     }
-    if (barisLama) D.ubah(t, barisLama.id, nilai);
-    else D.tambah(t, nilai);
+    try { if (barisLama) D.ubah(t, barisLama.id, nilai); else D.tambah(t, nilai); }
+    catch (err) { tempatGalat.append(kesalahan([err.message])); return; }
     pesan(barisLama ? 'Perubahan dicatat.' : `${def.judul} baru ditambahkan.`, 'sukses');
     saatSelesai();
   };
@@ -184,7 +184,7 @@ export async function halamanMaster(wadah, t) {
           el('div', { style: 'display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem' }, [
             cari,
             tempatJumlah,
-            bisaEdit() && P.admin() ? el('button.tombol-utama', {
+            bisaEdit() && (P.admin() || t==='master_material' && P.punya('master_material_tambah')) ? el('button.tombol-utama', {
               type: 'button', teks: `+ Tambah ${def.judul.toLowerCase()}`,
               style: 'margin-left:auto',
               onclick: () => formMaster(t, def, null, gambar),
@@ -192,7 +192,7 @@ export async function halamanMaster(wadah, t) {
           ]),
           tempatTabel,
           el('p.bantuan', { style: 'margin-top:.7rem', teks:
-            t==='master_material' ? 'Tambahkan material baru di sini setelah memeriksa nama dan satuan stok; penerimaan dan order memilih material yang terdaftar.' : 'Gunakan halaman ini untuk melihat, merapikan, atau menghapus data master.' }),
+            t==='master_material' ? 'Cari dahulu nama dan spesifikasi barang. Tambahkan hanya jika barang benar-benar belum ada; pilih satuan stok yang dipakai Gudang. Jika hanya beda penulisan, gunakan material yang sudah ada. Penerimaan dan order memilih material yang terdaftar.' : 'Gunakan halaman ini untuk melihat, merapikan, atau menghapus data master.' }),
         ]),
       ]),
     );
