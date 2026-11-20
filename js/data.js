@@ -600,7 +600,9 @@ const rapikan = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const kecil = (s) => rapikan(s).toLowerCase();
 
 /** Cari baris master berdasarkan nama (tanpa peduli besar kecil huruf). */
-export const masterDenganNama = (tabel, nama) => baris(tabel).find((r) => kecil(r.nama) === kecil(nama)) || null;
+export const masterDenganNama = (tabel, nama) => tabel==='master_material' && B.norm(nama)==='primaquat'
+  ? B.masterMaterial(baris(tabel),nama)
+  : baris(tabel).find((r) => kecil(r.nama) === kecil(nama)) || null;
 
 /** Seperti ensure_material / ensure_divisi di aplikasi desktop: nama baru
  *  yang diketik di form otomatis masuk master. */
@@ -621,6 +623,10 @@ export function pastikanMaster(tabel, nama, ekstra = {}) {
 export function normalkanSatuan(nama) {
   const bersih = rapikan(nama);
   if (!bersih) return '';
+  if (B.unit(bersih)==='liter') {
+    const liter=baris('master_satuan').find(r=>kecil(r.nama)==='liter');
+    if(liter)return liter.nama;
+  }
   const r = masterDenganNama('master_satuan', bersih);
   if (r) return r.nama;
   tambah('master_satuan', { nama: bersih });
@@ -628,6 +634,10 @@ export function normalkanSatuan(nama) {
 }
 
 export const satuanBawaan = (material) => masterDenganNama('master_material', material)?.satuan_default || '';
+export function satuanMenurutMaterial(material,satuan) {
+  const s=rapikan(satuan),bawaan=satuanBawaan(material);
+  return s && bawaan && B.samaUnit(s,bawaan) ? bawaan : s;
+}
 export const kategoriMaterial = (material) => masterDenganNama('master_material', material)?.kategori || '';
 
 const dekatNol = (v, batas = 0.005) => (Math.abs(v) < batas ? 0 : v);
@@ -637,8 +647,8 @@ const dekatNol = (v, batas = 0.005) => (Math.abs(v) < batas ? 0 : v);
 export function laporanStok(kategoriFilter = null) {
   const peta = new Map();   // kunci: material|satuan (huruf kecil)
   const ambil = (r) => {
-    const k = `${kecil(r.material)}|${B.unit(r.satuan)}`;
-    if (!peta.has(k)) peta.set(k, { material: rapikan(r.material), satuan: rapikan(r.satuan), masuk: 0, keluar: 0, penyesuaian:0 });
+    const k = `${B.norm(rapikan(r.material))}|${B.unit(r.satuan)}`;
+    if (!peta.has(k)) peta.set(k, { material: B.norm(r.material)==='primaquat' ? (masterDenganNama('master_material',r.material)?.nama || rapikan(r.material)) : rapikan(r.material), satuan: satuanMenurutMaterial(r.material,r.satuan) || rapikan(r.satuan), masuk: 0, keluar: 0, penyesuaian:0 });
     return peta.get(k);
   };
   for (const r of baris('material_masuk')) ambil(r).masuk += B.qtyBersih(state.data,r);

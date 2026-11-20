@@ -36,11 +36,12 @@ async function konfirmasiRevisi(sppbId, apa) {
 
 // --------------------------------------------------------- form buat SPPB
 function barisItem(item = {}) {
+  let satuanOtomatis = '';
   const kMaterial = inputMaster('master_material', item.material || '', {
     tempat: 'Material…',
     saatUbah: () => {
       const bawaan = D.satuanBawaan(kMaterial.value);
-      if (bawaan && !kSatuan.value) kSatuan.value = bawaan;
+      if (bawaan && (!kSatuan.value || kSatuan.value === satuanOtomatis)) { kSatuan.value = bawaan; satuanOtomatis = bawaan; }
     },
   });
   const kSatuan = inputMaster('master_satuan', item.satuan || '');
@@ -48,12 +49,23 @@ function barisItem(item = {}) {
   kQty.placeholder = 'Qty';
   const kBrand = el('input', { type: 'text', nilai: item.brand || '', placeholder: 'opsional' });
   const kKet = el('input', { type: 'text', nilai: item.keterangan || '', placeholder: 'mis. Untuk Perangkap Lalat Buah' });
+  const stokInfo = el('p.bantuan');
+  const cekStok = () => {
+    const m=D.masterDenganNama('master_material',kMaterial.value);
+    if(!m){stokInfo.textContent='';return;}
+    if(!m.satuan_default){stokInfo.textContent=`Material master: ${m.nama} · satuan stok belum diatur.`;return;}
+    const stok=D.laporanStok().find(r=>D.masterDenganNama('master_material',r.material)?.id===m.id && D.satuanMenurutMaterial(m.nama,r.satuan)===m.satuan_default);
+    stokInfo.textContent=`Material master: ${m.nama} · stok Gudang seluruh pemilik ${angka(stok?.stok||0,2)} ${m.satuan_default}.`;
+  };
+  kMaterial.addEventListener('change',cekStok);
+  if(item.material)cekStok();
   const wadah = el('div', { style: 'border-bottom:1px solid var(--garis-tipis);padding-bottom:.45rem;margin-bottom:.55rem' }, [
     el('div.baris-isian.tiga', { style: 'align-items:end' }, [
       isian('Material', kMaterial),
       isian('Satuan', kSatuan),
       isian('Qty diminta', kQty),
     ]),
+    stokInfo,
     el('div.baris-isian', {}, [
       isian('Keterangan tujuan pemakaian', kKet),
       isian('Brand', kBrand),
@@ -93,7 +105,10 @@ export function formSppbBaru(saatSelesai,referensi=null) {
     const no = rapikan(kNo.value);
     const items = daftarItem.filter((it) => !it.kosong()).map((it) => it.ambil());
     // anti-dobel: nama material tiap item disamakan dengan master / ditanyakan
-    for (const it of items) it.material = await namaFinal('master_material', it.material, 'Material');
+    for (const it of items) {
+      it.material = await namaFinal('master_material', it.material, 'Material');
+      it.satuan = D.satuanMenurutMaterial(it.material,it.satuan);
+    }
     const galat = [];
     if (!no) galat.push('No. SPPB wajib diisi.');
     else if (D.baris('sppb').some((s) => rapikan(s.no_sppb).toLowerCase() === no.toLowerCase())) {
@@ -170,6 +185,7 @@ function formItem(sppbId, itemLama, saatSelesai) {
       brand: rapikan(kBrand.value),
       keterangan: rapikan(kKetItem.value),
     };
+    nilai.satuan = D.satuanMenurutMaterial(nilai.material,nilai.satuan);
     const galat = [];
     if (!nilai.material) galat.push('Material wajib diisi.');
     if (!(nilai.qty_diminta > 0)) galat.push('Qty harus lebih dari 0.');

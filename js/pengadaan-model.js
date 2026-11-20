@@ -1,4 +1,11 @@
-export const norm=v=>String(v||'').trim().toLowerCase();
+// Alias disatukan hanya untuk barang yang telah dikonfirmasi sama.
+// Jangan menghapus tanda baca pada semua nama: ukuran/varian bisa berbeda.
+export const norm=v=>{const n=String(v||'').trim().toLowerCase();return /^prima[\s-]*quat$/.test(n)?'primaquat':n;};
+export function masterMaterial(rows,nama){
+  const key=norm(nama),matches=(rows||[]).filter(r=>norm(r.nama)===key);
+  if(key==='primaquat')return matches.find(r=>String(r.nama||'').trim().toLowerCase()==='prima-quat')||matches[0]||null;
+  return matches[0]||null;
+}
 export const unit=v=>({ltr:'liter',l:'liter',litre:'liter',liters:'liter',kilogram:'kg',pcs:'buah',pc:'buah',bh:'buah'}[norm(v)]||norm(v));
 export const samaUnit=(a,b)=>unit(a)===unit(b);
 const num=v=>Number(v)||0;
@@ -26,7 +33,7 @@ export function susunOrder(d,raw,id) {
   if(!it)throw Error('Item SPPB tidak ditemukan.');
   const bahan=norm(it.material)==='bbm'?raw.material_stok:it.material;
   if(norm(it.material)==='bbm'&&!['pertalite','pertamax','solar'].includes(norm(bahan)))throw Error('SPPB BBM harus dirinci: pilih Pertalite, Pertamax atau Solar untuk order ini.');
-  const master=d.tabel.master_material?.find(r=>norm(r.nama)===norm(bahan));
+  const master=masterMaterial(d.tabel.master_material,bahan);
   const o={...raw,id,sppb_item_id:it.id,material:master?.nama||bahan,satuan_sppb:it.satuan,
     satuan_stok:master?.satuan_default||it.satuan,qty_order:Number(raw.qty_order),
     faktor_order:samaUnit(raw.satuan_order,it.satuan)?1:(raw.faktor_order?Number(raw.faktor_order):null),
