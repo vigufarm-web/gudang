@@ -15,8 +15,8 @@ export function auditSemuaPemilik(data) {
   for(const r of data.tabel?.material_masuk||[]){if(!r.material||!r.satuan)continue;const item=items.get(String(r.sppb_item_id));add(r,r.pemilik_stok||docs.get(String(item?.sppb_id))?.divisi_pemohon||r.divisi,qtyBersih(data,r),0);}
   for(const r of data.tabel?.material_keluar||[])if(r.material&&r.satuan)add(r,r.pemilik_stok||r.divisi,0,Number(r.qty)||0);
   for(const o of Object.values(data.web?.stokOpname||{}))if(o.status==='Disetujui')for(const r of o.items||[])if(r.material&&r.satuan)get(r).penyesuaianBelumDibagi+=(Number(r.fisik)||0)-(Number(r.sistem)||0);
-  for(const r of Object.values(data.web?.koreksiStok||{}))if(r.material&&r.satuan)get(r).penyesuaianBelumDibagi+=Number(r.qty)||0;
-  for(const a of all.values()){a.baris=[...a.baris.values()].map(r=>({...r,saldo:r.masuk-r.keluar,perlu_diperiksa:r.masuk-r.keluar < -1e-7}));a.saldoRiwayat=a.baris.reduce((n,r)=>n+r.saldo,0);a.stokFisik=a.saldoRiwayat+a.penyesuaianBelumDibagi;a.perluDiperiksa=Math.abs(a.penyesuaianBelumDibagi)>1e-7||a.baris.some(r=>r.perlu_diperiksa);}
+  for(const r of Object.values(data.web?.koreksiStok||{}))if(r.material&&r.satuan){if(r.jenis==='pemilik'){const a=get(r),name=owner(r.pemilik),k=norm(name),row=a.baris.get(k)||{divisi:name,masuk:0,keluar:0};row.penyesuaian=(row.penyesuaian||0)+(Number(r.qty)||0);a.baris.set(k,row);}else get(r).penyesuaianBelumDibagi+=Number(r.qty)||0;}
+  for(const a of all.values()){a.baris=[...a.baris.values()].map(r=>({...r,saldo:r.masuk-r.keluar+(r.penyesuaian||0),perlu_diperiksa:r.masuk-r.keluar+(r.penyesuaian||0) < -1e-7}));a.saldoRiwayat=a.baris.reduce((n,r)=>n+r.saldo,0);a.stokFisik=a.saldoRiwayat+a.penyesuaianBelumDibagi;a.perluDiperiksa=Math.abs(a.penyesuaianBelumDibagi)>1e-7||a.baris.some(r=>r.perlu_diperiksa);}
   return all;
 }
 
@@ -39,8 +39,9 @@ export function auditPemilik(data, material, satuan) {
   for (const r of data.tabel?.material_keluar || []) {
     if (sama(r)) add(r.pemilik_stok || r.divisi, 0, Number(r.qty) || 0);
   }
-  return [...balances.values()].map(r => ({...r, saldo: r.masuk - r.keluar,
-    perlu_diperiksa: r.masuk - r.keluar < -1e-7}));
+  for(const r of Object.values(data.web?.koreksiStok||{}))if(r.jenis==='pemilik'&&sama(r)){const nama=owner(r.pemilik),key=norm(nama),row=balances.get(key)||{divisi:nama,masuk:0,keluar:0};row.penyesuaian=(row.penyesuaian||0)+(Number(r.qty)||0);balances.set(key,row);}
+  return [...balances.values()].map(r => ({...r, saldo: r.masuk - r.keluar+(r.penyesuaian||0),
+    perlu_diperiksa: r.masuk - r.keluar+(r.penyesuaian||0) < -1e-7}));
 }
 
 // Opname lama tidak menyebut pemilik. Selisih tetap ditunjukkan terpisah,
@@ -52,7 +53,7 @@ export function auditSaldoFisik(data, material, satuan) {
     .filter(o => o.status === 'Disetujui')
     .flatMap(o => o.items || []).filter(cocok)
     .reduce((n, row) => n + (Number(row.fisik) || 0) - (Number(row.sistem) || 0), 0);
-  const penyesuaian = penyesuaianOpname + Object.values(data.web?.koreksiStok || {}).filter(cocok).reduce((n,r)=>n+(Number(r.qty)||0),0);
+  const penyesuaian = penyesuaianOpname + Object.values(data.web?.koreksiStok || {}).filter(r=>cocok(r)&&r.jenis!=='pemilik').reduce((n,r)=>n+(Number(r.qty)||0),0);
   const saldoRiwayat = baris.reduce((n, row) => n + row.saldo, 0);
   return {baris, saldoRiwayat, penyesuaianBelumDibagi: penyesuaian,
     stokFisik: saldoRiwayat + penyesuaian,

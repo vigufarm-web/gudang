@@ -695,7 +695,7 @@ export function laporanKepemilikan(kategoriFilter = null) {
     for(const row of rows){
       const opname=B.norm(row.divisi)==='gudang'?audit.penyesuaianBelumDibagi:0;
       hasil.push({material:stock.material,satuan:stock.satuan,kategori:stock.kategori,divisi:row.divisi,
-        masuk:row.masuk,keluar:row.keluar,opname_sementara:opname,stok:row.saldo+opname,
+        masuk:row.masuk,keluar:row.keluar,opname_sementara:opname+(row.penyesuaian||0),stok:row.saldo+opname,
         status:audit.perluDiperiksa?'Perlu periksa':'Usulan riwayat'});
     }
   }

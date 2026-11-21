@@ -29,3 +29,18 @@ test('penyesuaian lama yang tidak ada dalam acuan tetap harus dihitung ulang',()
  basis.web.koreksiStok={[correction.id]:structuredClone(correction)};
  assert.throws(()=>W.validasiSimpanWorkflow(basis),/penyesuaian opname lain/);
 });
+test('koreksi pemilik mengubah total dan saldo pemilik tanpa mencatat transaksi palsu',()=>{
+ setup();D.state.data.tabel.material_keluar=[];const basis=structuredClone(D.state.data);
+ const r=W.koreksiSaldoPemilik('Himaquat','Liter','Padi',-0.5,'uji-rujukan-1','Koreksi hasil hitung');
+ assert.equal(D.saldoMilik('Himaquat','Liter','Padi'),19.5);assert.equal(D.saldoMilik('Himaquat','Liter','Gudang'),0);
+ assert.equal(D.laporanStok()[0].stok,19.5);assert.equal(D.laporanKepemilikan().find(x=>x.divisi==='Padi').opname_sementara,-0.5);
+ assert.equal(D.baris('material_keluar').length,0);W.validasiSimpanWorkflow(basis);periksaPerubahanSaldo(basis,D.state.data);
+ assert.throws(()=>W.koreksiSaldoPemilik('Himaquat','Liter','Padi',-0.5,'uji-rujukan-1','Ulang'),/sudah pernah/);
+ assert.throws(()=>W.koreksiSaldoPemilik('Himaquat','Liter','Padi',-30,'uji-lain','Terlalu banyak'),/tidak cukup/);
+});
+test('koreksi pemilik ganda pada perangkat bersamaan ditolak',()=>{
+ setup();D.state.data.tabel.material_keluar=[];const dasar=structuredClone(D.state.data);
+ W.koreksiSaldoPemilik('Himaquat','Liter','Padi',1,'sama','Uji');const lokal=structuredClone(D.state.data);
+ D.state.data=structuredClone(dasar);W.koreksiSaldoPemilik('Himaquat','Liter','Padi',1,'sama','Uji');const remote=structuredClone(D.state.data);
+ D.state.data=D.gabungTiga(dasar,lokal,remote);assert.throws(()=>W.validasiSimpanWorkflow(remote),/acuan koreksi pemilik berubah|sudah pernah/);
+});

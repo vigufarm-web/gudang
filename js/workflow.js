@@ -70,6 +70,16 @@ export function koreksiSaldoGudang(material,satuan,alasan){
  const id=uid(),r={id,material,satuan,qty:-saldo,saldo_acuan:saldo,alasan:alasan.trim(),oleh:actor(),waktu:waktu()};
  (D.web().koreksiStok ||= {})[id]=r;D.tandaiBerubah();return r;
 }
+export function koreksiSaldoPemilik(material,satuan,pemilik,qty,rujukan,alasan){
+ requireThat(P.admin(),'Hanya admin dapat mencatat koreksi saldo pemilik.');
+ const q=Number(qty),ref=String(rujukan||'').trim();
+ requireThat(material&&satuan&&pemilik&&norm(pemilik)!=='gudang'&&Number.isFinite(q)&&Math.abs(q)>1e-7&&Math.abs(q*10**presisi(satuan)-Math.round(q*10**presisi(satuan)))<1e-6&&ref&&alasan?.trim(),'Material, divisi, jumlah, rujukan dan alasan wajib diisi.');
+ requireThat(!Object.values(D.web().koreksiStok||{}).some(x=>x.jenis==='pemilik'&&norm(x.rujukan)===norm(ref)),'Rujukan koreksi sudah pernah digunakan.');
+ const saldo=D.saldoMilik(material,satuan,pemilik);
+ requireThat(Number.isFinite(saldo)&&saldo+q>=-1e-7,'Saldo pemilik tidak cukup untuk koreksi.');
+ const id=uid(),r={id,jenis:'pemilik',material,satuan,pemilik,qty:q,saldo_acuan:saldo,rujukan:ref,alasan:alasan.trim(),oleh:actor(),waktu:waktu()};
+ (D.web().koreksiStok ||= {})[id]=r;D.tandaiBerubah();return r;
+}
 function basisJejak(material,satuan){const match=r=>norm(r.material)===norm(material)&&samaUnit(r.satuan,satuan),m={};for(const tab of ['material_masuk','material_keluar'])for(const r of D.baris(tab).filter(match))m[tab+':'+r.id]=JSON.stringify(r);for(const r of Object.values(D.web().returPenerimaan||{}).filter(match))m['retur:'+r.id]=JSON.stringify(r);for(const r of adjustment(D.state.data).filter(match))m['opname:'+r.opname_id]=JSON.stringify(r);return m;}
 export function buatOpname(materials,tanggal){
  requireThat((P.punya('opname')||P.punya('gudang'))&&materials.length,'Hak opname dan minimal satu material diperlukan.');requireThat(/^\d{4}-\d{2}-\d{2}$/.test(tanggal),'Tanggal wajib diisi.');const ids=new Set();
@@ -102,6 +112,12 @@ export function validasiSimpanWorkflow(basis){
  for(const [id,r] of Object.entries(lamaKoreksi))requireThat(JSON.stringify(corrections[id])===JSON.stringify(r),'Riwayat koreksi tidak dapat diubah atau dihapus.');
  for(const [id,r] of Object.entries(corrections))if(!lamaKoreksi[id]){
   const snapshot=copy(D.state.data);delete snapshot.web.koreksiStok[id];
+  if(r.jenis==='pemilik'){
+   const before=saldoPemilik(snapshot,r.material,r.satuan,r.pemilik);
+   requireThat(r.pemilik&&norm(r.pemilik)!=='gudang'&&r.rujukan?.trim()&&r.alasan?.trim()&&Number.isFinite(r.qty)&&Math.abs(r.qty)>1e-7&&Math.abs(r.qty*10**presisi(r.satuan)-Math.round(r.qty*10**presisi(r.satuan)))<1e-6&&Number.isFinite(before)&&Math.abs(before-r.saldo_acuan)<1e-7&&before+r.qty>=-1e-7,'Saldo acuan koreksi pemilik berubah. Muat ulang dan periksa.');
+   requireThat(Object.values(corrections).filter(x=>x.jenis==='pemilik'&&norm(x.rujukan)===norm(r.rujukan)).length===1,'Rujukan koreksi sudah pernah digunakan.');
+   continue;
+  }
   const before=saldoPemilik(snapshot,r.material,r.satuan,'Gudang');
   requireThat(Number.isFinite(before)&&before < -1e-7&&Math.abs(before-r.saldo_acuan)<1e-7&&Math.abs(r.qty+before)<1e-7,'Saldo acuan koreksi berubah. Muat ulang dan periksa kembali.');
  }
