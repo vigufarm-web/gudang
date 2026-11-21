@@ -77,7 +77,7 @@ export function buatOpname(materials,tanggal){
  const id=uid(),o={id,nomor:'SO-'+tanggal.replaceAll('-','')+'-'+id.slice(0,8).toUpperCase(),tanggal,status:'Draf',items,penghitung:actor(),mulai:waktu()};(D.web().stokOpname ||= {})[id]=o;jejak(o,'Mulai penghitungan; stok acuan dikunci');return o;
 }
 function jagaOpname(o){requireThat(o&&(P.admin()||((P.punya('opname')||P.punya('gudang'))&&o.penghitung.id===actor().id)),'Tidak berhak mengisi opname ini.');}
-function periksaBasis(o){for(const r of o.items){const now=basisJejak(r.material,r.satuan);requireThat(Object.keys(now).filter(k=>k.startsWith('opname:')&&k!=='opname:'+o.id).every(k=>r.basis[k]!==undefined),'Ada penyesuaian opname lain setelah acuan diambil. Hitung ulang.');requireThat(Object.entries(r.basis).every(([k,v])=>now[k]===v),'Transaksi yang sudah menjadi acuan opname dikoreksi/dihapus. Batalkan dan hitung ulang opname.');}}
+function periksaBasis(o,koreksiBersamaan=new Set()){for(const r of o.items){const now=basisJejak(r.material,r.satuan);requireThat(Object.keys(now).filter(k=>k.startsWith('opname:')&&k!=='opname:'+o.id&&!koreksiBersamaan.has(k)).every(k=>r.basis[k]!==undefined),'Ada penyesuaian opname lain setelah acuan diambil. Hitung ulang.');requireThat(Object.entries(r.basis).every(([k,v])=>now[k]===v),'Transaksi yang sudah menjadi acuan opname dikoreksi/dihapus. Batalkan dan hitung ulang opname.');}}
 export function isiOpname(id,nilai,ajukan=false){const o=D.web().stokOpname[id];jagaOpname(o);requireThat(o.status==='Draf','Hanya draf opname yang dapat diisi.');const rows=o.items.map(r=>{const n=nilai[r.id];requireThat(n&&n.fisik!==''&&n.fisik!=null&&Number.isFinite(Number(n.fisik))&&Number(n.fisik)>=0,'Isi hasil fisik semua material, termasuk angka 0 bila kosong.');requireThat(Math.abs(Number(n.fisik)*10**presisi(r.satuan)-Math.round(Number(n.fisik)*10**presisi(r.satuan)))<1e-6,'Hasil fisik harus sesuai presisi satuan.');requireThat(Math.abs(Number(n.fisik)-r.sistem)<1e-7||n.alasan?.trim(),'Alasan setiap selisih wajib diisi.');return {...r,fisik:Number(n.fisik),alasan:n.alasan?.trim()||''};});periksaBasis(o);o.items=rows;if(ajukan)o.status='Diajukan';jejak(o,ajukan?'Ajukan opname ke KTU':'Simpan hasil hitung');}
 export function putusOpname(id,setuju,alasan=''){
  const o=D.web().stokOpname[id];requireThat(P.punya('ktu')&&o?.status==='Diajukan','Hanya KTU dapat memutuskan opname yang diajukan.');
@@ -110,7 +110,12 @@ export function validasiSimpanWorkflow(basis){
  for(const o of opname()){
   const lama=basis.web?.stokOpname?.[o.id];if(JSON.stringify(o)===JSON.stringify(lama))continue;
   if(o.status!=='Disetujui'&&lama?.status!=='Disetujui')continue;
-  if(o.status==='Disetujui')periksaBasis(o);
+  if(o.status==='Disetujui'){
+   // Koreksi administratif yang baru dibuat setelah ACC dalam penyimpanan
+   // yang sama sudah divalidasi terhadap saldo setelah penyesuaian di atas.
+   const bersamaan=new Set(Object.entries(corrections).filter(([id,r])=>!lamaKoreksi[id]&&r.waktu>=o.ktu?.waktu&&o.items.some(x=>norm(x.material)===norm(r.material)&&samaUnit(x.satuan,r.satuan))).map(([id])=>'opname:koreksi:'+id));
+   periksaBasis(o,bersamaan);
+  }
   else requireThat(!opname().some(x=>x.id!==o.id&&x.status==='Disetujui'&&x.items.some(r=>r.basis?.['opname:'+o.id]!==undefined)),'Ada opname baru yang bergantung pada penyesuaian ini. Gunakan opname baru.');
   for(const r of o.items){requireThat(r.fisik!==null&&Number.isFinite(r.fisik)&&r.fisik>=0,'Hasil fisik opname tidak valid.');const s=D.laporanStok().find(x=>norm(x.material)===norm(r.material)&&samaUnit(x.satuan,r.satuan));requireThat(s&&s.stok>=-1e-7,'Penyesuaian bersamaan membuat stok negatif. Muat ulang dan hitung kembali.');}
  }
