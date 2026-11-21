@@ -1,5 +1,6 @@
 import {formSppbBaru} from './sppb.js?v=8';
 import * as D from './data.js?v=8';
+import {opnameCocokStatus} from './opname-monitor.js?v=20261121';
 import * as P from './pengguna.js?v=8';
 import * as W from './workflow.js?v=8';
 import {el,kosongkan,isian,panel,tabel,angka,tanya,mintaTeks,pesan,taruh,hariIni} from './ui.js?v=8';
@@ -83,4 +84,23 @@ function formKoreksi(repaint){
  const pilih=el('select',{},rows.map((r,i)=>el('option',{value:String(i),teks:`${r.material} · ${angka(r.stok,2)} ${r.satuan}`}))),alasan=el('textarea',{rows:3});
  const p=panel('Koreksi administratif saldo Gudang',el('div',{},[el('p',{teks:'Koreksi mengubah saldo buku negatif milik Gudang menjadi nol. Ini bukan hasil hitung fisik dan tidak mengubah saldo milik divisi lain. Alasan dan pelaksana dicatat.'}),isian('Material *',pilih),isian('Alasan *',alasan)]),[button('Simpan koreksi',async()=>{const r=rows[Number(pilih.value)];if(await tanya('Simpan koreksi administratif?',`${r.material}: saldo Gudang ${angka(r.stok,2)} ${r.satuan} menjadi nol. Ini bukan opname fisik.`))await simpan(()=>W.koreksiSaldoGudang(r.material,r.satuan,alasan.value),()=>{p.tutup();repaint();});})]);
 }
-export async function halamanOpname(wadah){const list=el('div'),koreksi=el('div');const gambar=()=>{kosongkan(list).append(tabel([{l:'Nomor',k:'nomor'},{l:'Tanggal hitung',k:'tanggal'},{l:'Penghitung',nilai:o=>o.penghitung.nama},{l:'Status',k:'status'},{l:'Material berselisih',nilai:o=>o.items.filter(r=>r.fisik!=null&&Math.abs(r.fisik-r.sistem)>1e-7).length},{l:'Material',nilai:o=>o.items.map(r=>r.material).join(', ')}],W.opname().sort((a,b)=>b.mulai.localeCompare(a.mulai)),{kosong:'Belum ada stok opname.',saatKlik:o=>detailOpname(o,gambar)}));kosongkan(koreksi);if(P.admin())koreksi.append(el('h3',{teks:'Riwayat koreksi administratif'}),tabel([{l:'Waktu',nilai:r=>new Date(r.waktu).toLocaleString('id-ID')},{l:'Material',k:'material'},{l:'Jumlah koreksi',nilai:r=>`${angka(r.qty,2)} ${r.satuan}`},{l:'Oleh',nilai:r=>r.oleh?.nama||'—'},{l:'Alasan',k:'alasan'}],Object.values(D.web().koreksiStok||{}).sort((a,b)=>b.waktu.localeCompare(a.waktu)),{kosong:'Belum ada koreksi administratif.'}));};taruh(wadah,el('p',{teks:'Stok fisik Gudang dibandingkan dengan acuan saat mulai menghitung. Hanya acc KTU yang membuat penyesuaian. Material yang tidak dihitung tetap utuh.'}),bisaEdit()&&(P.punya('opname')||P.punya('gudang'))?button('+ Mulai opname',()=>mulaiOpname(gambar)):null,bisaEdit()&&P.admin()?button('+ Koreksi administratif',()=>formKoreksi(gambar)):null,list,koreksi);gambar();}
+export async function halamanOpname(wadah){
+ const list=el('div'),koreksi=el('div'),tabs=el('div.monitor-tab',{'aria-label':'Status stok opname'});
+ const pilihan=[['belum','Belum ACC'],['disetujui','Sudah ACC'],['dibatalkan','Dibatalkan'],['semua','Semua']];
+ let status='belum';
+ const cocok=opnameCocokStatus;
+ const gambar=()=>{
+  const semua=W.opname().slice().sort((a,b)=>String(b.mulai||'').localeCompare(String(a.mulai||'')));
+  kosongkan(tabs);
+  for(const [k,label] of pilihan)tabs.append(el('button'+(status===k?'.aktif':''),{type:'button','aria-pressed':status===k,onclick:()=>{status=k;gambar();}},[label,el('span',{teks:String(semua.filter(o=>cocok(o,k)).length)})]));
+  const rows=semua.filter(o=>cocok(o,status));
+  kosongkan(list).append(el('p.bantuan',{'aria-live':'polite',teks:`${rows.length} opname ditampilkan. Klik baris untuk melihat rincian dan jejak.`}),tabel([
+   {l:'Nomor',k:'nomor'},{l:'Tanggal hitung',k:'tanggal'},{l:'Penghitung',nilai:o=>o.penghitung?.nama||'—'},
+   {l:'Status',nilai:o=>el('span.chip'+(o.status==='Disetujui'?'.chip-ok':o.status==='Dibatalkan'?'.chip-tolak':'.chip-tunggu'),{teks:o.status==='Diajukan'?'Menunggu ACC':o.status==='Disetujui'?'Sudah ACC':o.status})},
+   {l:'ACC oleh / waktu',nilai:o=>o.status==='Disetujui'&&o.ktu?`${o.ktu.nama||'—'} · ${o.ktu.waktu?new Date(o.ktu.waktu).toLocaleString('id-ID'):'—'}`:'—'},
+   {l:'Material berselisih',nilai:o=>o.items.filter(r=>r.fisik!=null&&Math.abs(r.fisik-r.sistem)>1e-7).length},{l:'Material',nilai:o=>o.items.map(r=>r.material).join(', ')}
+  ],rows,{kosong:status==='belum'?'Tidak ada opname yang belum ACC.':status==='disetujui'?'Belum ada opname yang sudah ACC.':status==='dibatalkan'?'Tidak ada opname yang dibatalkan.':'Belum ada stok opname.',saatKlik:o=>detailOpname(o,gambar)}));
+  kosongkan(koreksi);if(P.admin())koreksi.append(el('h3',{teks:'Riwayat koreksi administratif'}),tabel([{l:'Waktu',nilai:r=>new Date(r.waktu).toLocaleString('id-ID')},{l:'Material',k:'material'},{l:'Jumlah koreksi',nilai:r=>`${angka(r.qty,2)} ${r.satuan}`},{l:'Oleh',nilai:r=>r.oleh?.nama||'—'},{l:'Alasan',k:'alasan'}],Object.values(D.web().koreksiStok||{}).sort((a,b)=>b.waktu.localeCompare(a.waktu)),{kosong:'Belum ada koreksi administratif.'}));
+ };
+ taruh(wadah,el('p',{teks:'Stok fisik Gudang dibandingkan dengan acuan saat mulai menghitung. Opname yang sudah ACC otomatis tampil pada tab Sudah ACC. Hanya acc KTU yang membuat penyesuaian.'}),bisaEdit()&&(P.punya('opname')||P.punya('gudang'))?button('+ Mulai opname',()=>mulaiOpname(gambar)):null,bisaEdit()&&P.admin()?button('+ Koreksi administratif',()=>formKoreksi(gambar)):null,tabs,list,koreksi);gambar();
+}
